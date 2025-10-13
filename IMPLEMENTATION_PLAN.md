@@ -42,9 +42,9 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
   ├── llog-tests.asd
   └── README.md
   ```
-- [ ] Initialize git repository
-- [ ] Set up initial ASDF system definition
-- [ ] Create package definitions
+- [x] Initialize git repository
+- [x] Set up initial ASDF system definition
+- [x] Create package definitions
 
 **Deliverables:**
 - Loadable ASDF system
@@ -53,14 +53,14 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 ### 1.2 Core Abstractions (Week 2)
 
 **Tasks:**
-- [ ] Design core logger protocol and class hierarchy
+- [x] Design core logger protocol and class hierarchy
   - `logger` class with slots: name, level, outputs, context-fields
   - Protocol methods: `log-entry`, `should-log-p`, `add-output`, etc.
-- [ ] Implement log levels and level filtering system
+- [x] Implement log levels and level filtering system
   - Define constants: `+trace+`, `+debug+`, `+info+`, `+warn+`, `+error+`, `+fatal+`, `+panic+`
   - Level comparison and filtering functions
   - Per-logger level configuration
-- [ ] Create log entry structure (efficient, minimal allocation)
+- [x] Create log entry structure (efficient, minimal allocation)
   - Struct or class with slots: level, timestamp, message, fields, logger-name
   - Consider using structure for performance (fixed layout, faster access)
   - Optimize for minimal allocation during creation
@@ -101,10 +101,10 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 ### 1.3 Basic Fields (Week 3)
 
 **Tasks:**
-- [ ] Implement basic field types (string, int, float, boolean, timestamp)
+- [x] Implement basic field types (string, int, float, boolean, timestamp)
   - Create field representation (name + value + type)
   - Implement type-specific constructors
-- [ ] Build field type protocol for extensibility
+- [x] Build field type protocol for extensibility
   - Generic function `encode-field` for custom types
   - Protocol for field serialization
 
@@ -136,10 +136,10 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 ### 1.4 Simple Output (Week 4)
 
 **Tasks:**
-- [ ] Implement simple stream output (stdout/stderr)
+- [x] Implement simple stream output (stdout/stderr)
   - `stream-output` class
   - Basic `write-entry` method
-- [ ] Implement console encoder (human-readable, plain text)
+- [x] Implement console encoder (human-readable, plain text)
   - Simple text format: `[LEVEL] message field1=value1 field2=value2`
 
 **Design:**
@@ -166,6 +166,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - Levels work and filter correctly
 - Basic fields can be attached
 - Unit tests pass on SBCL
+- Remaining follow-up: add initial FiveAM coverage and resolve ocicl lint crash (currently blocked by upstream issue)
 
 ---
 
@@ -176,7 +177,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 ### 2.1 Sugared API (Week 5)
 
 **Tasks:**
-- [ ] Create sugared API macros (info, warn, error, etc.)
+- [x] Create sugared API macros (info, warn, error, etc.)
   - Macros that accept message + keyword arguments
   - Automatic field construction from keyword args
   - Optimize for common cases
@@ -208,7 +209,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 ### 2.2 Typed API (Week 5)
 
 **Tasks:**
-- [ ] Create typed API macros (info-typed, warn-typed, etc.)
+- [x] Create typed API macros (info-typed, warn-typed, etc.)
   - Explicit field type functions
   - Zero-allocation optimization
 
