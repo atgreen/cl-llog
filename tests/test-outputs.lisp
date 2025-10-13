@@ -60,6 +60,8 @@
          (logger (make-logger :outputs (list async) :level :trace)))
     (unwind-protect
          (progn
+           ;; Give the worker thread time to start
+           (sleep 0.01)
            (log-entry logger (make-log-entry llog:+warn+ "async"))
            (flush-output async)
            (let ((contents (get-output-stream-string stream)))

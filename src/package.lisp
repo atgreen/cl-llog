@@ -16,7 +16,14 @@
 
   ;; Re-export useful CL symbols
   (:export #:make-logger
-           #:*logger*)
+           #:*logger*
+           #:log-entry
+           #:make-log-entry
+           #:log-entry-level
+           #:log-entry-timestamp
+           #:log-entry-message
+           #:log-entry-logger-name
+           #:log-entry-fields)
 
   ;; Log levels (constants)
   (:export #:+trace+

@@ -25,26 +25,24 @@
            (optimize speed))
   (%make-log-entry
    :level level
-   :timestamp (get-internal-real-time)
+   :timestamp (get-universal-time)
    :message message
    :logger-name (or logger-name "")
    :fields fields))
 
 ;;; Timestamp utilities
 
-(defun timestamp-to-universal (internal-time)
-  "Convert internal real time to universal time."
-  (declare (type unsigned-byte internal-time)
+(defun timestamp-to-universal (universal-time)
+  "Identity function for compatibility - timestamps are now stored as universal time."
+  (declare (type unsigned-byte universal-time)
            (optimize speed (safety 1)))
-  (+ (- (get-universal-time)
-        (floor (get-internal-real-time) internal-time-units-per-second))
-     (floor internal-time internal-time-units-per-second)))
+  universal-time)
 
 (defun format-timestamp (timestamp &optional (stream *standard-output*))
-  "Format a timestamp (internal real time) to ISO8601-ish format."
+  "Format a timestamp (universal time) to ISO8601-ish format."
   (declare (type unsigned-byte timestamp)
            (optimize speed))
   (multiple-value-bind (sec min hour date month year)
-      (decode-universal-time (timestamp-to-universal timestamp))
+      (decode-universal-time timestamp)
     (format stream "~4,'0D-~2,'0D-~2,'0DT~2,'0D:~2,'0D:~2,'0D"
             year month date hour min sec)))

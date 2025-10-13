@@ -54,7 +54,7 @@
   (make-field name value :bool))
 
 (declaim (inline timestamp))
-(defun timestamp (name &optional (value (get-internal-real-time)))
+(defun timestamp (name &optional (value (get-universal-time)))
   "Create a timestamp field. If VALUE is not provided, uses current time."
   (declare (type cl:string name)
            (type unsigned-byte value)
