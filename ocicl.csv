@@ -1,0 +1,8 @@
+# LLOG Dependencies
+# Format: system-name, version-constraint
+
+# Test dependencies (optional)
+fiveam, latest
+
+# Benchmark dependencies (optional)
+trivial-benchmark, latest

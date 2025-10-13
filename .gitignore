@@ -1,0 +1,36 @@
+# Common Lisp
+*.fasl
+*.fas
+*.lib
+*.dx64fsl
+*.lx64fsl
+*.x86f
+*.sse2f
+*.abcl
+*.mem
+*.o
+*.so
+*.dylib
+
+# ASDF
+*.asd~
+
+# Emacs/SLIME
+*~
+\#*\#
+.\#*
+*.elc
+.dir-locals.el
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# ocicl
+ocicl/
+.ocicl/
+
+# OS
+.DS_Store
+Thumbs.db
