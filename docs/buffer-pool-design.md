@@ -1,5 +1,7 @@
 # Buffer Pool & Zero-Allocation Strategy (Phase 3.1)
 
+**Copyright (c) 2025 Anthony Green <green@moxielogic.com>**
+
 **Date:** 2025-10-13  
 **Author:** Codex (with async outputs complete)
 

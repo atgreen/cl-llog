@@ -1,5 +1,7 @@
 ;;;; encoders/encoder.lisp - Base encoder protocol
 ;;;; SPDX-License-Identifier: MIT
+;;;;
+;;;; Copyright (c) 2025 Anthony Green <green@moxielogic.com>
 
 (in-package #:llog)
 

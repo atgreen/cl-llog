@@ -1,5 +1,7 @@
 ;;;; tests/test-buffers.lisp - Buffer pool and allocation tests
 ;;;; SPDX-License-Identifier: MIT
+;;;;
+;;;; Copyright (c) 2025 Anthony Green <green@moxielogic.com>
 
 (in-package #:llog/tests)
 

@@ -1,5 +1,7 @@
 ;;;; encoders/json.lisp - JSON encoder
 ;;;; SPDX-License-Identifier: MIT
+;;;;
+;;;; Copyright (c) 2025 Anthony Green <green@moxielogic.com>
 
 (in-package #:llog)
 
