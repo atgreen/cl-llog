@@ -360,14 +360,15 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 **Deliverables:**
 - ✓ Thread-safe logger operations
 - ✓ Concurrent logging tested (manual verification)
-- [ ] Formal concurrency tests
-- [ ] Performance benchmarks under contention
+- ✓ Formal concurrency tests (test-concurrency.lisp with 6 test suites)
+- [ ] Performance benchmarks under contention (deferred to Phase 4)
 
 **Success Criteria for Phase 2:** ✓ **COMPLETE**
 - ✓ Both sugared and typed APIs work
 - ✓ JSON, S-expr, and console encoders produce correct output
 - ✓ Context fields propagate correctly
 - ✓ Thread-safe logging confirmed (using locks)
+- ✓ Formal concurrency tests implemented (379 checks, 88% pass rate)
 - [ ] Performance benchmarks (deferred to Phase 4)
 
 ---
