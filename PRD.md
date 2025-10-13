@@ -630,6 +630,124 @@ Logger categories are automatically determined from the lexical context:
 
 Use `sb-debug:*debug-name*` or similar implementation-specific APIs to determine the enclosing function/method at macro-expansion time.
 
+### FR-14: Syslog Integration
+
+**Priority:** P2 (Medium)
+
+Integration with Unix syslog for centralized logging infrastructure:
+
+**Syslog Output:**
+
+```lisp
+;; Local syslog via Unix socket
+(llog:make-syslog-output
+  :facility :local0
+  :encoder :json
+  :min-level :info)
+
+;; Remote syslog via UDP
+(llog:make-syslog-output
+  :facility :daemon
+  :network :udp
+  :host "syslog.example.com"
+  :port 514
+  :encoder :json)
+
+;; Remote syslog via TCP
+(llog:make-syslog-output
+  :facility :user
+  :network :tcp
+  :host "localhost"
+  :port 601)
+```
+
+**Level Mapping:**
+
+LLOG levels map to syslog priorities:
+
+| LLOG Level | Syslog Priority | Numeric |
+|------------|----------------|---------|
+| +trace+    | Debug          | 7       |
+| +debug+    | Debug          | 7       |
+| +info+     | Info           | 6       |
+| +warn+     | Warning        | 4       |
+| +error+    | Error          | 3       |
+| +fatal+    | Critical       | 2       |
+| +panic+    | Emergency      | 0       |
+
+**Facility Support:**
+
+Standard syslog facilities:
+- `:kern`, `:user`, `:mail`, `:daemon`, `:auth`, `:syslog`, `:lpr`, `:news`
+- `:uucp`, `:cron`, `:authpriv`, `:ftp`
+- `:local0` through `:local7` (for custom applications)
+
+**RFC5424 Structured Data:**
+
+Map LLOG fields to structured data elements:
+
+```lisp
+;; LLOG logging
+(llog:info "User login"
+  :user-id 12345
+  :request-id "abc-123"
+  :ip-address "192.168.1.1")
+
+;; Produces RFC5424 syslog message:
+;; <134>1 2025-10-13T08:04:23.123Z myhost myapp 1234 - [llog@32473 user-id="12345" request-id="abc-123" ip-address="192.168.1.1"] User login
+```
+
+**CEE/JSON Support:**
+
+When using JSON encoder with syslog, add `@cee:` prefix for rsyslog/syslog-ng compatibility:
+
+```lisp
+(llog:make-syslog-output
+  :facility :local0
+  :encoder (llog:make-json-encoder :cee-prefix t))
+
+;; Produces:
+;; <134>1 2025-10-13T08:04:23.123Z myhost myapp - - @cee:{"level":"info","msg":"User login","user-id":12345}
+```
+
+This enables automatic JSON parsing in modern syslog daemons.
+
+**Implementation:**
+
+- Use CFFI to call `openlog()`, `syslog()`, `closelog()` for local syslog
+- Use socket I/O for remote syslog (UDP/TCP)
+- Platform-specific: Unix-only (use `#+unix` reader conditional)
+- Format messages according to RFC5424 or RFC3164 (BSD syslog)
+
+**Benefits:**
+
+- Integration with existing logging infrastructure
+- Centralized log collection in production environments
+- Compliance with organizational logging standards
+- Works with syslog aggregators (rsyslog, syslog-ng, Splunk)
+- Container-friendly (send to host syslog from containers)
+
+**Configuration Example:**
+
+```lisp
+(defvar *logger*
+  (llog:make-logger
+    :outputs (list
+      ;; Local development - console
+      (llog:make-stream-output *standard-output*
+        :encoder (llog:make-console-encoder :colors t))
+
+      ;; Production - JSON to file
+      (llog:make-file-output "/var/log/app.json"
+        :encoder :json)
+
+      ;; Production - syslog for centralized collection
+      (llog:make-syslog-output
+        :facility :local0
+        :encoder (llog:make-json-encoder :cee-prefix t)
+        :min-level :info))))
+```
+
 ---
 
 ## Technical Requirements
@@ -1007,6 +1125,7 @@ All log entries should track:
 - [ ] Buffer pooling
 - [ ] Expression logging macro (FR-11)
 - [ ] Configuration save/restore (FR-12)
+- [ ] Syslog integration (FR-14) - optional, Unix-only
 
 **Success Criteria:**
 - Zero allocations in typed API path
@@ -1014,6 +1133,7 @@ All log entries should track:
 - Config save/restore persists across sessions
 - Performance targets met
 - Works on CCL and ECL
+- Syslog output works on Unix systems (local and remote)
 
 ### Phase 4: Polish and Documentation (Month 5)
 
@@ -1081,26 +1201,30 @@ All log entries should track:
 
 ## Appendix A: Comparison with Go Libraries
 
-| Feature | zap | zerolog | logrus | log4cl | LLOG |
-|---------|-----|---------|--------|--------|------|
-| Zero-allocation | ✓ | ✓ | ✗ | ✗ | ✓ |
-| Structured logging | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Leveled logging | ✓ | ✓ | ✓ | ✓ | ✓ |
-| JSON output | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Dual API (typed/sugared) | ✓ | ✗ | ✗ | ✗ | ✓ |
-| Hook system | ✗ | ✓ | ✓ | ✗ | ✓ |
-| Sampling | ✓ | ✓ | ✗ | ✗ | ✓ |
-| Context propagation | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Hierarchical loggers | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Auto logger naming | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Pattern layouts | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Config save/restore | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Daily log rotation | ✗ | ✗ | ✗ | ✓ | ✓ |
-| Expression logging | ✗ | ✗ | ✗ | ✓ | ✓ |
-| REPL integration | N/A | N/A | N/A | ✓ | ✓ |
-| Editor integration | N/A | N/A | N/A | ✓ | ✓ |
-| Condition system | N/A | N/A | N/A | ✗ | ✓ |
-| Compile-time elim | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Feature | zap | zerolog | logrus | log4cl | cl-syslog | LLOG |
+|---------|-----|---------|--------|--------|-----------|------|
+| Zero-allocation | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Structured logging | ✓ | ✓ | ✓ | ✓ | ✓* | ✓ |
+| Leveled logging | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| JSON output | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| Dual API (typed/sugared) | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
+| Hook system | ✗ | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Sampling | ✓ | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Context propagation | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| Syslog integration | hook | built-in | hook | ✗ | ✓ | ✓ |
+| RFC5424 compliance | ✗ | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Hierarchical loggers | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Auto logger naming | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Pattern layouts | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Config save/restore | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Daily log rotation | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| Expression logging | ✗ | ✗ | ✗ | ✓ | ✗ | ✓ |
+| REPL integration | N/A | N/A | N/A | ✓ | ✗ | ✓ |
+| Editor integration | N/A | N/A | N/A | ✓ | ✗ | ✓ |
+| Condition system | N/A | N/A | N/A | ✗ | ✗ | ✓ |
+| Compile-time elim | ✗ | ✗ | ✗ | ✗ | ✗ | ✓ |
+
+\* cl-syslog supports RFC5424 structured data (specialized syslog format)
 
 ---
 
@@ -1113,7 +1237,7 @@ All log entries should track:
 
 **Common Lisp Logging:**
 - [log4cl](https://github.com/sharplispers/log4cl)
-- [cl-syslog](https://github.com/mhsjlw/cl-syslog)
+- [cl-syslog](https://github.com/mmaul/cl-syslog)
 - [vom](https://github.com/orthecreedence/vom)
 
 **Observability Standards:**
