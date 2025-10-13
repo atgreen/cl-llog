@@ -5,7 +5,12 @@
   (:use #:cl)
   (:import-from #:bordeaux-threads
                 #:make-lock
-                #:with-lock-held)
+                #:with-lock-held
+                #:make-thread
+                #:join-thread
+                #:make-condition-variable
+                #:condition-wait
+                #:condition-notify)
   (:shadow #:string #:float #:error #:trace #:debug #:warn)
   (:documentation "High-performance structured logging framework for Common Lisp")
 
@@ -69,6 +74,7 @@
   ;; Outputs
   (:export #:make-stream-output
            #:make-file-output
+           #:make-async-output
            #:flush-output
            #:close-output
            #:output)

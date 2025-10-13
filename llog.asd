@@ -32,7 +32,8 @@
                              (:module "outputs"
                               :components ((:file "output")
                                           (:file "stream")
-                                          (:file "file"))))))
+                                          (:file "file")
+                                          (:file "async"))))))
 
   :in-order-to ((test-op (test-op "llog/tests"))))
 
@@ -51,6 +52,8 @@
                              (:file "test-logger")
                              (:file "test-encoders")
                              (:file "test-buffers")
+                             (:file "test-outputs")
+                             (:file "test-concurrency")
                              (:file "test-api"))))
   :perform (test-op (o c) (symbol-call :fiveam :run! :llog)))
 

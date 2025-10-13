@@ -8,9 +8,11 @@
 (defun %make-temp-path ()
   "Return a fresh temporary pathname and ensure the directory exists."
   (let* ((dir (uiop:temporary-directory))
-         (name (format nil "llog-test-~A.log" (uiop:random-string 8)))
+         (name (format nil "llog-test-~A-~A.log"
+                      (get-universal-time)
+                      (random 100000)))
          (path (merge-pathnames name dir)))
-    (uiop:ensure-directories-exist dir)
+    (ensure-directories-exist path)
     path))
 
 (def-test file-output-unbuffered ()

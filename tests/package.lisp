@@ -27,6 +27,8 @@
                 #:log-entry-message
                 #:log-entry-fields
                 #:logger
+                #:logger-level
+                #:logger-outputs
                 #:make-logger
                 #:set-level
                 #:should-log-p
@@ -43,6 +45,7 @@
                 #:make-sexpr-encoder
                 #:make-stream-output
                 #:make-file-output
+                #:make-async-output
                 #:flush-output
                 #:close-output
                 #:log-entry
@@ -52,7 +55,12 @@
                 #:panic
                 #:info-typed
                 #:fatal-typed
-                #:panic-typed))
+                #:panic-typed
+                #:+trace+
+                #:+debug+
+                #:+info+
+                #:+warn+
+                #:+error+))
 
 (in-package #:llog/tests)
 
