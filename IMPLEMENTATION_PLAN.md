@@ -368,7 +368,8 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - ✓ JSON, S-expr, and console encoders produce correct output
 - ✓ Context fields propagate correctly
 - ✓ Thread-safe logging confirmed (using locks)
-- ✓ Formal concurrency tests implemented (379 checks, 88% pass rate)
+- ✓ Stream outputs protected with per-output locks
+- ✓ Formal concurrency tests implemented (467 checks, 100% pass rate)
 - [ ] Performance benchmarks (deferred to Phase 4)
 
 ---
