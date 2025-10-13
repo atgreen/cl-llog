@@ -3,6 +3,7 @@
 
 (defpackage #:llog
   (:use #:cl)
+  (:shadow #:string #:float #:error #:trace #:debug #:warn)
   (:documentation "High-performance structured logging framework for Common Lisp")
 
   ;; Re-export useful CL symbols
