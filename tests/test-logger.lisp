@@ -15,8 +15,8 @@
 (defun %string-output ()
   (make-string-output-stream))
 
-(defun %logger-with-stream (stream)
-  (let ((output (make-stream-output stream :encoder (make-console-encoder))))
+(defun %logger-with-stream (stream &key (encoder (make-console-encoder)))
+  (let ((output (make-stream-output stream :encoder encoder)))
     (make-logger :name "test" :level :trace :outputs (list output))))
 
 (def-test logger-context-and-output ()

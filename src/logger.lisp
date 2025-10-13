@@ -29,7 +29,12 @@
     :initform nil
     :accessor logger-context-fields
     :type list
-    :documentation "Fields that are added to every log entry"))
+    :documentation "Fields that are added to every log entry")
+   (lock
+    :initarg :lock
+    :initform (make-lock "llog/logger")
+    :reader logger-lock
+    :documentation "Lock protecting mutable logger state"))
   (:documentation "A logger that writes structured log entries to multiple outputs."))
 
 ;;; Global default logger
@@ -50,14 +55,15 @@
    NAME - logger name for identification
    LEVEL - minimum log level (keyword, string, or integer)
    OUTPUTS - list of output destinations"
-  (let ((level-int (if (integerp level)
-                       level
-                       (or (parse-level level)
-                           +info+))))
+  (let* ((level-int (if (integerp level)
+                        level
+                        (or (parse-level level)
+                            +info+)))
+         (output-list (when outputs (copy-list outputs))))
     (make-instance 'logger
                    :name name
                    :level level-int
-                   :outputs (or outputs
+                   :outputs (or output-list
                                 (list (make-stream-output *standard-output*))))))
 
 ;;; Level Management
@@ -67,7 +73,9 @@
   (let ((level (parse-level level-designator)))
     (unless level
       (cl:error "Invalid log level: ~S" level-designator))
-    (setf (logger-level logger) level)))
+    (with-lock-held ((logger-lock logger))
+      (setf (slot-value logger 'level) level))
+    (values level)))
 
 (declaim (inline should-log-p))
 (defun should-log-p (logger level)
@@ -81,13 +89,15 @@
 
 (defun add-output (logger output)
   "Add an output destination to LOGGER."
-  (push output (logger-outputs logger))
+  (with-lock-held ((logger-lock logger))
+    (push output (slot-value logger 'outputs)))
   logger)
 
 (defun remove-output (logger output)
   "Remove an output destination from LOGGER."
-  (setf (logger-outputs logger)
-        (remove output (logger-outputs logger)))
+    (with-lock-held ((logger-lock logger))
+      (setf (slot-value logger 'outputs)
+            (remove output (slot-value logger 'outputs))))
   logger)
 
 ;;; Core Logging Function
@@ -97,24 +107,26 @@
   (declare (type logger logger)
            (type log-entry entry)
            (optimize speed))
+  (let (context-fields logger-name outputs)
+    (with-lock-held ((logger-lock logger))
+      (setf context-fields (copy-list (logger-context-fields logger))
+            logger-name (logger-name logger)
+            outputs (copy-list (logger-outputs logger))))
 
-  ;; Add context fields to entry
-  (when (logger-context-fields logger)
-    (setf (log-entry-fields entry)
-          (append (logger-context-fields logger)
-                  (log-entry-fields entry))))
+    (when context-fields
+      (setf (log-entry-fields entry)
+            (append context-fields (log-entry-fields entry))))
 
-  ;; Set logger name if not already set
-  (when (string= (log-entry-logger-name entry) "")
-    (setf (log-entry-logger-name entry) (logger-name logger)))
+    (when (and logger-name
+               (string= (log-entry-logger-name entry) ""))
+      (setf (log-entry-logger-name entry) logger-name))
 
-  ;; Write to all outputs
-  (dolist (output (logger-outputs logger))
-    (handler-case
-        (write-entry output entry)
-      (cl:error (e)
-        ;; Never let logging errors crash the application
-        (format *error-output* "~&Logging error: ~A~%" e))))
+    (dolist (output outputs)
+      (handler-case
+          (write-entry output entry)
+        (cl:error (e)
+          ;; Never let logging errors crash the application
+          (format *error-output* "~&Logging error: ~A~%" e)))))
 
   (values))
 
@@ -123,20 +135,34 @@
 (defun with-fields (logger &rest keyword-args)
   "Create a child logger with additional context fields.
    Returns a new logger instance with the same configuration but additional fields."
-  (let ((new-logger (make-instance 'logger
-                                   :name (logger-name logger)
-                                   :level (logger-level logger)
-                                   :outputs (logger-outputs logger)
-                                   :context-fields (logger-context-fields logger))))
-    (setf (logger-context-fields new-logger)
-          (append (logger-context-fields new-logger)
-                  (keywords-to-fields keyword-args)))
-    new-logger))
+  (if (null keyword-args)
+      logger
+      (let* ((additional (keywords-to-fields keyword-args))
+             (lock (logger-lock logger))
+             name level outputs context)
+        (with-lock-held (lock)
+          (setf name (logger-name logger)
+                level (logger-level logger)
+                outputs (logger-outputs logger)
+                context (append (copy-list (logger-context-fields logger))
+                                additional)))
+        (make-instance 'logger
+                       :name name
+                       :level level
+                       :outputs outputs
+                       :context-fields context
+                       :lock lock))))
 
 (defun child-logger (parent-logger name)
   "Create a child logger that inherits configuration from PARENT-LOGGER."
-  (make-instance 'logger
-                 :name name
-                 :level (logger-level parent-logger)
-                 :outputs (logger-outputs parent-logger)
-                 :context-fields (logger-context-fields parent-logger)))
+  (let (level outputs context)
+    (with-lock-held ((logger-lock parent-logger))
+      (setf level (logger-level parent-logger)
+            outputs (logger-outputs parent-logger)
+            context (copy-list (logger-context-fields parent-logger))))
+    (make-instance 'logger
+                   :name name
+                   :level level
+                   :outputs outputs
+                   :context-fields context
+                   :lock (logger-lock parent-logger))))

@@ -11,7 +11,7 @@
   :source-control (:git "https://github.com/yourusername/llog.git")
 
   ;; Core has zero external dependencies
-  :depends-on ()
+  :depends-on ("bordeaux-threads")
 
   :components ((:module "src"
                 :serial t

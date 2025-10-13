@@ -39,6 +39,8 @@
                 #:duration-ms
                 #:keywords-to-fields
                 #:make-console-encoder
+                #:make-json-encoder
+                #:make-sexpr-encoder
                 #:make-stream-output
                 #:log-entry
                 #:*logger*

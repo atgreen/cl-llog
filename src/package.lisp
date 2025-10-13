@@ -3,6 +3,9 @@
 
 (defpackage #:llog
   (:use #:cl)
+  (:import-from #:bordeaux-threads
+                #:make-lock
+                #:with-lock-held)
   (:shadow #:string #:float #:error #:trace #:debug #:warn)
   (:documentation "High-performance structured logging framework for Common Lisp")
 
