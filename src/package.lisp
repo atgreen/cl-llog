@@ -10,7 +10,8 @@
                 #:join-thread
                 #:make-condition-variable
                 #:condition-wait
-                #:condition-notify)
+                #:condition-notify
+                #:current-thread)
   (:shadow #:string #:float #:error #:trace #:debug #:warn)
   (:documentation "High-performance structured logging framework for Common Lisp")
 

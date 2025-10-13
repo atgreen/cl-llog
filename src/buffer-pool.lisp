@@ -83,20 +83,44 @@
     (when (plusp len)
       (aref (char-buffer-string buffer) (1- len)))))
 
-;;; Global Pool + Thread Cache
+;;; Global Pool + Thread-Local Cache
 
 (defparameter *char-buffer-pool*
   (make-buffer-pool :buffer-size 8192 :max-buffers 32)
   "Global pool of reusable character buffers.")
 
-(defparameter *thread-char-buffer* nil
-  "Thread-local cache for a single reusable character buffer.")
+(defstruct thread-local-cache
+  "Thread-local storage for buffer caching."
+  (lock (make-lock "llog/thread-cache") :type t)
+  (cache (make-hash-table :test 'eq :weakness :key) :type hash-table))
+
+(defparameter *thread-buffer-cache*
+  (make-thread-local-cache)
+  "Thread-local buffer cache mapping threads to buffers.")
+
+(defun %get-thread-buffer ()
+  "Get the thread-local buffer for the current thread, if any."
+  (let ((cache (thread-local-cache-cache *thread-buffer-cache*))
+        (thread (current-thread)))
+    (gethash thread cache)))
+
+(defun %set-thread-buffer (buffer)
+  "Set the thread-local buffer for the current thread."
+  (let ((cache (thread-local-cache-cache *thread-buffer-cache*))
+        (thread (current-thread)))
+    (setf (gethash thread cache) buffer)))
+
+(defun %clear-thread-buffer ()
+  "Clear the thread-local buffer for the current thread."
+  (let ((cache (thread-local-cache-cache *thread-buffer-cache*))
+        (thread (current-thread)))
+    (remhash thread cache)))
 
 (defun acquire-char-buffer (&optional (pool *char-buffer-pool*))
   "Obtain a character buffer from POOL, reusing a thread-local buffer when available."
-  (or (when *thread-char-buffer*
-        (let ((buffer *thread-char-buffer*))
-          (setf *thread-char-buffer* nil)
+  (or (let ((buffer (%get-thread-buffer)))
+        (when buffer
+          (%clear-thread-buffer)
           (char-buffer-clear buffer)))
       (with-lock-held ((buffer-pool-lock pool))
         (let ((buffer (pop (buffer-pool-buffers pool))))
@@ -105,11 +129,11 @@
               (make-char-buffer :capacity (buffer-pool-buffer-size pool)))))))
 
 (defun release-char-buffer (buffer &optional (pool *char-buffer-pool*))
-  "Return BUFFER to POOL for reuse."
+  "Return BUFFER to POOL for reuse, caching in thread-local storage first."
   (char-buffer-clear buffer)
   (cond
-    ((null *thread-char-buffer*)
-     (setf *thread-char-buffer* buffer))
+    ((null (%get-thread-buffer))
+     (%set-thread-buffer buffer))
     (t
      (with-lock-held ((buffer-pool-lock pool))
        (when (< (length (buffer-pool-buffers pool))
