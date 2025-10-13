@@ -136,6 +136,21 @@ Support standard log levels with semantic meaning:
 - Per-logger level configuration
 - Dynamic level changes without restart
 
+**Conditional Logging:**
+Enable efficient conditional execution based on log level:
+
+```lisp
+;; Check if logging is enabled before expensive computation
+(when (llog:debug-p)
+  (let ((expensive-data (compute-expensive-debug-info)))
+    (llog:debug "Debug info" :data expensive-data)))
+
+;; Macro form that returns T/NIL
+(if (llog:trace-p *logger*)
+    (detailed-trace)
+    (simple-trace))
+```
+
 ### FR-3: Structured Fields
 
 **Priority:** P0 (Critical)
@@ -230,6 +245,36 @@ Support context propagation with accumulated fields:
   username: alice
 ```
 
+5. **Pattern Layout Encoder** (configurable format strings)
+```lisp
+;; Create encoder with custom pattern
+(llog:make-pattern-encoder
+  :pattern "%d{ISO8601} [%p] %c{2}: %m%n"
+  :patterns '(("%d" . timestamp)
+              ("%p" . level)
+              ("%c" . logger-name)
+              ("%m" . message)
+              ("%n" . newline)
+              ("%t" . thread-name)
+              ("%F" . source-file)
+              ("%L" . line-number)))
+
+;; Example output:
+;; 2025-10-13T08:04:23.123Z [INFO] api.handler: User logged in
+```
+
+**Pattern Directives:**
+- `%d{format}` - Timestamp with optional format
+- `%p` - Log level
+- `%c{precision}` - Logger category name, optionally shortened
+- `%m` - Log message
+- `%n` - Newline
+- `%t` - Thread name
+- `%F` - Source file name
+- `%L` - Line number
+- `%M` - Method/function name
+- `%%` - Literal percent sign
+
 ### FR-6: Condition System Integration
 
 **Priority:** P1 (High)
@@ -304,7 +349,34 @@ Support multiple concurrent outputs:
     (llog:make-stream-output *standard-output*
                             :encoder :console
                             :min-level :warn)
-    (llog:make-syslog-output :facility :local0)))
+    (llog:make-syslog-output :facility :local0)
+    ;; Daily rolling file appender
+    (llog:make-daily-file-output "/var/log/app.%Y%m%d.log"
+                                 :encoder :json)))
+```
+
+**Output Types:**
+
+1. **Stream Output** - Write to any CL stream
+2. **File Output** - Simple file output with optional buffering
+3. **Daily Rolling File Output** - Automatic daily log rotation
+   - Pattern-based filenames with date/time substitution
+   - Automatic rollover when date changes
+   - Optional backup file naming
+   - Configurable retention policy
+
+```lisp
+;; Daily rolling with custom pattern
+(llog:make-daily-file-output
+  "/var/log/app.%Y%m%d.log"  ; Rolls daily
+  :backup-pattern "app.%Y%m%d-%H%M.log.bak"  ; Optional backup naming
+  :max-backups 7  ; Keep last 7 days
+  :encoder (llog:make-json-encoder))
+
+;; Weekly rolling
+(llog:make-daily-file-output
+  "/var/log/app.%Y-W%U.log"  ; Rolls weekly (%U = week number)
+  :encoder :json)
 ```
 
 **Features:**
@@ -312,6 +384,7 @@ Support multiple concurrent outputs:
 - Per-output encoding and filtering
 - Async writes via background threads
 - Buffering strategies (unbuffered, line-buffered, block-buffered)
+- Automatic log rotation based on time or size
 
 ### FR-9: Sampling and Rate Limiting
 
@@ -377,6 +450,35 @@ Leverage Lisp macros for performance and ergonomics:
 ;; Expands to optimized typed logging call
 ```
 
+**Expression Logging:**
+
+Quick debugging macro that logs both expression and its value:
+
+```lisp
+;; Log expression and result
+(llog:expr (+ x y))
+;; Outputs: "(+ x y) => 42"
+
+;; With custom level
+(llog:expr-debug (complex-calculation x y z))
+;; Outputs: "(complex-calculation x y z) => #<RESULT ...>"
+
+;; Multiple expressions
+(llog:exprs x y (sqrt z))
+;; Outputs:
+;;   x => 10
+;;   y => 20
+;;   (sqrt z) => 5.0
+```
+
+**Implementation:**
+```lisp
+(defmacro llog:expr (expr &optional (level :debug))
+  `(let ((result ,expr))
+     (llog:log ,level "~A => ~S" ',expr result)
+     result))
+```
+
 ### FR-12: REPL Integration
 
 **Priority:** P1 (High)
@@ -399,6 +501,134 @@ Excellent REPL experience:
 ;; Search logs interactively
 (llog:grep-logs :user-id 12345)
 ```
+
+**Configuration Save/Restore:**
+
+Save and restore logging configurations for debugging sessions:
+
+```lisp
+;; Save current configuration with a name
+(llog:save :debugging-auth-bug)
+(llog:save :performance-testing)
+
+;; List saved configurations
+(llog:list-configs)
+;; => (:debugging-auth-bug :performance-testing :last-session)
+
+;; Restore a saved configuration
+(llog:restore :debugging-auth-bug)
+
+;; Configurations persist across sessions (saved to ~/.llog-configs or similar)
+```
+
+**"Narrowing in Reverse" Workflow:**
+
+A powerful debugging technique unique to hierarchical loggers:
+
+```lisp
+;; 1. Start with broad DEBUG logging
+(llog:set-level :debug)  ; Root logger to DEBUG
+(run-system)  ; Floods REPL with logs
+
+;; 2. Selectively turn OFF categories you don't need
+(llog:set-level "database" :off)
+(llog:set-level "network.http" :off)
+(llog:set-level "ui.render" :off)
+(run-system)  ; Much cleaner output, focused on relevant areas
+
+;; 3. Save this focused configuration
+(llog:save :bug-1234-investigation)
+
+;; 4. Later (or on another machine), restore it
+(llog:restore :bug-1234-investigation)
+
+;; 5. Reset when done
+(llog:reset-all-levels)  ; Back to defaults
+```
+
+**Interactive Configuration Display:**
+
+```lisp
+;; Show current logging configuration as a tree
+(llog:config)
+;; Output:
+;; ROOT [INFO]
+;;   ├─ myapp [DEBUG]
+;;   │  ├─ myapp.api [DEBUG]
+;;   │  │  ├─ myapp.api.auth [OFF]
+;;   │  │  └─ myapp.api.handler [TRACE]
+;;   │  └─ myapp.database [OFF]
+;;   └─ third-party [WARN]
+```
+
+### FR-13: Hierarchical Logger Naming
+
+**Priority:** P1 (High)
+
+Automatic logger hierarchy based on code context:
+
+**Automatic Category Detection:**
+
+Logger categories are automatically determined from the lexical context:
+
+```lisp
+(in-package :myapp)
+
+(defun process-request ()
+  (llog:info "Processing")  ; Logger: "myapp.process-request"
+  (labels ((helper ()
+             (llog:debug "Helper")))  ; Logger: "myapp.process-request.helper"
+    (helper)))
+
+(defmethod handle ((req http-request))
+  (llog:info "Handling"))  ; Logger: "myapp.handle.http-request"
+
+(defmethod handle :before ((req authenticated-request))
+  (llog:debug "Auth check"))  ; Logger: "myapp.handle.before.authenticated-request"
+```
+
+**Hierarchy Rules:**
+
+1. Start with package name
+2. Add function/generic function name
+3. For methods, add qualifiers (:before, :after, :around)
+4. Add non-T specializers
+5. For LABELS/FLET, add local function name
+
+**Benefits:**
+
+- **Granular Control:** Set levels per-function, per-method, per-specializer
+- **Easy Filtering:** Turn off entire subsystems: `(llog:set-level "myapp.database" :off)`
+- **Method-Specific Debugging:** `(llog:set-level "myapp.handle.after" :debug)`
+- **Natural Organization:** Reflects code structure without manual naming
+
+**API:**
+
+```lisp
+;; Automatic naming (default)
+(llog:info "Message")  ; Uses context-derived name
+
+;; Explicit logger name
+(llog:info "myapp.custom.logger" "Message")
+
+;; Get current logger name
+(llog:current-logger-name)  ; => "myapp.my-function"
+
+;; Set level by category pattern
+(llog:set-level "myapp.api.*" :debug)  ; All API loggers
+(llog:set-level "*.handle.before.*" :off)  ; All :before methods named 'handle'
+
+;; Query logger hierarchy
+(llog:list-loggers :pattern "myapp.api*")
+;; => ("myapp.api" "myapp.api.handler" "myapp.api.auth")
+
+;; Get parent logger
+(llog:parent-logger "myapp.api.handler")  ; => "myapp.api"
+```
+
+**Implementation Notes:**
+
+Use `sb-debug:*debug-name*` or similar implementation-specific APIs to determine the enclosing function/method at macro-expansion time.
 
 ---
 
@@ -483,6 +713,59 @@ Excellent REPL experience:
 - Performance tuning guide
 - Examples for common use cases
 - Comparison with Go libraries
+
+### TR-8: Editor Integration Support
+
+**Priority:** P2 (Medium)
+
+Design the API to support deep editor integration (Emacs/Vim/VSCode):
+
+**Required APIs:**
+
+```lisp
+;; Enumerate all loggers and their levels
+(llog:list-all-loggers)
+;; => (("myapp" :debug) ("myapp.api" :info) ...)
+
+;; Get logger hierarchy as tree
+(llog:logger-tree &optional root)
+
+;; Programmatic level changes with notifications
+(llog:set-level "myapp.api" :debug
+                :notify-fn (lambda (logger old-level new-level)
+                            (format t "~A: ~A -> ~A" logger old-level new-level)))
+
+;; Query logger configuration
+(llog:logger-info "myapp.api")
+;; => (:name "myapp.api" :level :info :effective-level :debug
+;;     :parent "myapp" :children ("myapp.api.handler" "myapp.api.auth"))
+
+;; Source location tracking
+(llog:info "Message" :source-location (list :file "api.lisp" :line 42))
+```
+
+**Log Entry Metadata:**
+
+All log entries should track:
+- Source file and line number (when available)
+- Logger category name
+- Thread ID
+- Timestamp
+
+**Editor Feature Support:**
+
+1. **Interactive Level Control:** Click on logger names to change levels
+2. **Source Navigation:** Click on log messages to jump to source
+3. **Visual Hierarchy:** Display logger tree with current levels
+4. **Log Colorization:** Level-based syntax highlighting
+5. **Quick Actions:** Context menus for common operations
+
+**Future Extensions:**
+
+- Emacs package (log4slime equivalent)
+- VS Code extension
+- Vim plugin
+- REPL protocol for editor communication
 
 ---
 
@@ -699,11 +982,16 @@ Excellent REPL experience:
 - [ ] JSON encoder
 - [ ] S-expression encoder
 - [ ] Console encoder with colors
+- [ ] Pattern layout encoder (FR-5)
 - [ ] Contextual logging (with-fields)
 - [ ] Sugared and typed APIs
+- [ ] Hierarchical logger naming (FR-13)
+- [ ] Conditional logging checks (FR-2)
 
 **Success Criteria:**
 - All encoders produce valid output
+- Pattern layouts work with custom formats
+- Automatic logger naming from package/function context
 - Performance within 5x of targets
 - Thread-safe logging confirmed
 
@@ -711,14 +999,19 @@ Excellent REPL experience:
 
 **Deliverables:**
 - [ ] Hook system
-- [ ] Multiple outputs
+- [ ] Multiple outputs (FR-8)
+- [ ] Daily rolling file appenders (FR-8)
 - [ ] Async logging with ring buffers
 - [ ] Sampling and rate limiting
 - [ ] Condition system integration
 - [ ] Buffer pooling
+- [ ] Expression logging macro (FR-11)
+- [ ] Configuration save/restore (FR-12)
 
 **Success Criteria:**
 - Zero allocations in typed API path
+- Daily log rotation working reliably
+- Config save/restore persists across sessions
 - Performance targets met
 - Works on CCL and ECL
 
@@ -730,11 +1023,16 @@ Excellent REPL experience:
 - [ ] Performance tuning guide
 - [ ] Example applications
 - [ ] Comparison benchmarks with Go libraries
+- [ ] "Narrowing in reverse" workflow documentation (FR-12)
+- [ ] Editor integration API documentation (TR-8)
+- [ ] Logger hierarchy visualization tools
 
 **Success Criteria:**
 - Documentation completeness > 90%
 - All examples run without errors
 - Performance comparison published
+- Migration guide covers common log4cl patterns
+- Editor integration APIs are well-documented
 
 ### Phase 5: Community Release (Month 6)
 
@@ -771,23 +1069,38 @@ Excellent REPL experience:
 
 8. **Async Default:** Should async logging be the default or opt-in?
 
+9. **Hierarchical Naming Portability:** How to handle automatic logger naming across different CL implementations that may have different introspection capabilities?
+
+10. **Logger Name Caching:** Should logger names be computed at macroexpansion time or runtime? Trade-offs between flexibility and performance?
+
+11. **Configuration Storage:** Where to store saved configurations? Home directory, XDG_CONFIG_HOME, or configurable?
+
+12. **Pattern vs Fixed Layouts:** Should pattern layouts be the primary interface with presets for JSON/console, or keep them separate?
+
 ---
 
 ## Appendix A: Comparison with Go Libraries
 
-| Feature | zap | zerolog | logrus | LLOG |
-|---------|-----|---------|--------|------|
-| Zero-allocation | ✓ | ✓ | ✗ | ✓ |
-| Structured logging | ✓ | ✓ | ✓ | ✓ |
-| Leveled logging | ✓ | ✓ | ✓ | ✓ |
-| JSON output | ✓ | ✓ | ✓ | ✓ |
-| Dual API (typed/sugared) | ✓ | ✗ | ✗ | ✓ |
-| Hook system | ✗ | ✓ | ✓ | ✓ |
-| Sampling | ✓ | ✓ | ✗ | ✓ |
-| Context propagation | ✓ | ✓ | ✓ | ✓ |
-| REPL integration | N/A | N/A | N/A | ✓ |
-| Condition system | N/A | N/A | N/A | ✓ |
-| Compile-time elim | ✗ | ✗ | ✗ | ✓ |
+| Feature | zap | zerolog | logrus | log4cl | LLOG |
+|---------|-----|---------|--------|--------|------|
+| Zero-allocation | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Structured logging | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Leveled logging | ✓ | ✓ | ✓ | ✓ | ✓ |
+| JSON output | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Dual API (typed/sugared) | ✓ | ✗ | ✗ | ✗ | ✓ |
+| Hook system | ✗ | ✓ | ✓ | ✗ | ✓ |
+| Sampling | ✓ | ✓ | ✗ | ✗ | ✓ |
+| Context propagation | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Hierarchical loggers | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Auto logger naming | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Pattern layouts | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Config save/restore | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Daily log rotation | ✗ | ✗ | ✗ | ✓ | ✓ |
+| Expression logging | ✗ | ✗ | ✗ | ✓ | ✓ |
+| REPL integration | N/A | N/A | N/A | ✓ | ✓ |
+| Editor integration | N/A | N/A | N/A | ✓ | ✓ |
+| Condition system | N/A | N/A | N/A | ✗ | ✓ |
+| Compile-time elim | ✗ | ✗ | ✗ | ✗ | ✓ |
 
 ---
 
