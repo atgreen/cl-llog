@@ -8,7 +8,7 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 
 🚧 **Under Active Development** - v0.1.0
 
-**Phase 1 Complete**: Core logging infrastructure is functional with comprehensive test coverage (45 tests, 100% pass rate).
+**Phase 2 Complete**: Structured logging, multiple encoders, and async/file outputs are in place with comprehensive test coverage (50 tests, 100% pass rate).
 
 ## Features
 
@@ -22,12 +22,12 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 - **Leveled Logging**: TRACE, DEBUG, INFO, WARN, ERROR, FATAL, PANIC
 - **Field Types**: String, int, float, bool, timestamp, duration, error/condition
 - **Multiple Outputs**: Stream and file outputs with per-output configuration
+- **Async Logging**: `make-async-output` queues entries and flushes via a background worker thread
 
 ### In Progress 🚧
 
 - Hierarchical logger naming (package.function.method auto-detection)
 - Pattern layout encoder (configurable format strings)
-- Async logging with ring buffers
 - Daily rolling file appenders
 
 ### Planned 📋
@@ -72,6 +72,20 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
   (llog:info logger "Processing request")
   (process-request)
   (llog:info logger "Request completed"))
+
+;; Switch output backend (console -> JSON file)
+(let* ((file-output (llog:make-file-output "app.log" :encoder (llog:make-json-encoder)))
+       (logger (llog:make-logger :outputs (list file-output))))
+  (llog:info logger "Logs now flow to app.log"))
+
+;; Fan-out to multiple backends (console + async JSON file)
+(let* ((console (llog:make-stream-output *standard-output*
+                                         :encoder (llog:make-console-encoder :colors t)))
+       (file (llog:make-file-output "structured.log"
+                                    :encoder (llog:make-json-encoder)))
+       (async (llog:make-async-output file :queue-size 2048))
+       (logger (llog:make-logger :outputs (list console async))))
+  (llog:info logger "This entry appears on stdout and in structured.log"))
 ```
 
 ## Installation
@@ -95,14 +109,44 @@ In your Lisp REPL:
 (asdf:load-system :llog)
 ```
 
+## Configuring Outputs & Encoders
+
+Every logger ships with a console output by default. Swap or add backends using the output helpers:
+
+```lisp
+;; Replace console output with JSON file logging
+(setf llog:*logger*
+      (llog:make-logger
+        :outputs (list (llog:make-file-output "logs/app.json"
+                                             :encoder (llog:make-json-encoder)))))
+
+;; Add a human-readable console output alongside JSON
+(llog:add-output llog:*logger*
+                 (llog:make-stream-output *standard-output*
+                                         :encoder (llog:make-console-encoder :colors t)))
+
+;; Remove an output when it is no longer needed
+(llog:remove-output llog:*logger*
+                    (first (llog:logger-outputs llog:*logger*)))
+
+;; Wrap a file output in the async writer to decouple I/O latency
+(llog:add-output llog:*logger*
+                 (llog:make-async-output
+                   (llog:make-file-output "logs/structured.log"
+                                          :encoder (llog:make-json-encoder))
+                   :queue-size 4096))
+```
+
+Encoders are pluggable—pass `:encoder` to any output to switch formats (console, JSON, S-expression, pattern layout when available).
+
 ## Performance
 
-LLOG is designed for minimal overhead:
+LLOG is designed for minimal overhead. Current work is focused on reaching these targets:
 
 - **Typed API**: < 100ns per log call (without I/O)
 - **Sugared API**: < 500ns per log call (without I/O)
-- **Zero allocations**: Achieved in typed API hot path
-- **10x faster**: Than existing CL loggers for structured logging
+- **Zero allocations**: Typed hot path minimizes allocations via buffer pooling (additional DSP work pending)
+- **10x faster**: Benchmark suite (Phase 4) will validate improvements against existing CL loggers
 
 ## Documentation
 
@@ -134,7 +178,7 @@ LLOG is designed for minimal overhead:
 (asdf:test-system :llog)
 ```
 
-**Current Test Status**: 45 tests, 100% pass rate
+**Current Test Status**: 50 tests, 100% pass rate
 
 Test coverage includes:
 - Log levels and filtering
@@ -182,7 +226,7 @@ LLOG combines the best of both worlds:
 - [x] Log levels and filtering
 - [x] Field types (string, int, float, bool, timestamp, duration, error)
 - [x] Stream output
-- [x] Test suite with 45 tests
+- [x] Test suite with 50 tests
 
 ### Phase 2: Structured Logging - In Progress
 - [x] Sugared and typed APIs

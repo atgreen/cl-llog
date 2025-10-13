@@ -24,17 +24,12 @@
    (buffer-size
     :initarg :buffer-size
     :reader file-output-buffer-size
-    :type fixnum
-    :documentation "Maximum buffer size for :block mode")
-   (buffer-stream
-    :initarg :buffer-stream
-    :accessor file-output-buffer-stream
-    :documentation "String output stream for :block buffering")
-   (buffer-length
-    :initarg :buffer-length
-    :accessor file-output-buffer-length
-    :type fixnum
-    :documentation "Current number of buffered characters in :block mode")
+   :type fixnum
+   :documentation "Maximum buffer size for :block mode")
+   (buffer
+    :initarg :buffer
+    :accessor file-output-buffer
+    :documentation "Char buffer used for :block buffering")
    (lock
     :initarg :lock
     :accessor file-output-lock
@@ -71,8 +66,8 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
                    ((:line) :line)
                    ((:block) :block)))
            (stream (%open-log-stream pathname))
-           (buffer-stream (when (eq mode :block)
-                             (make-string-output-stream)))
+           (buffer (when (eq mode :block)
+                     (make-char-buffer :capacity buffer-size)))
            (lock (make-lock "llog/file-output"))
            (level (if (integerp min-level)
                       min-level
@@ -84,8 +79,7 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
                      :stream stream
                      :buffer-mode mode
                      :buffer-size (max 1 buffer-size)
-                     :buffer-stream buffer-stream
-                     :buffer-length 0
+                     :buffer buffer
                      :lock lock))))
 
 (defun %ensure-file-stream (output)
@@ -100,52 +94,58 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
   "Write PAYLOAD directly to the file stream."
   (%ensure-file-stream output)
   (let ((stream (file-output-stream output)))
-    (write-string payload stream)
+    (cond
+      ((typep payload 'char-buffer)
+       (char-buffer-write-to-stream payload stream))
+      ((stringp payload)
+       (write-string payload stream))
+      (t
+       (write-string (princ-to-string payload) stream)))
     (when force-p
       (force-output stream))))
 
 (defun %flush-buffer (output)
   "Flush the block buffer to disk."
-  (let ((buffer-stream (file-output-buffer-stream output)))
-    (when buffer-stream
-      (let ((buffer (get-output-stream-string buffer-stream)))
-        (setf (file-output-buffer-length output) 0
-              (file-output-buffer-stream output) (make-string-output-stream))
-        (when (> (length buffer) 0)
-          (%write-direct output buffer nil)
-          (force-output (file-output-stream output)))))))
+  (let ((buffer (file-output-buffer output)))
+    (when (and buffer (> (char-buffer-length buffer) 0))
+      (%write-direct output buffer nil)
+      (force-output (file-output-stream output))
+      (char-buffer-clear buffer))))
+
+(defun %write-block-entry (output buffer)
+  "Handle writing BUFFER when file output is in :block mode."
+  (let* ((len (char-buffer-length buffer))
+         (limit (file-output-buffer-size output)))
+    (if (> len limit)
+        (progn
+          (%flush-buffer output)
+          (%write-direct output buffer nil))
+        (let ((aggregate (or (file-output-buffer output)
+                             (setf (file-output-buffer output)
+                                   (make-char-buffer :capacity (max limit len))))))
+          (when (> (+ (char-buffer-length aggregate) len) limit)
+            (%flush-buffer output))
+          (char-buffer-push-buffer aggregate buffer)
+          (when (>= (char-buffer-length aggregate) limit)
+            (%flush-buffer output))))))
 
 (defmethod write-entry ((output file-output) (entry log-entry))
   (when (level>= (log-entry-level entry) (output-min-level output))
-    (let ((payload (with-output-to-string (stream)
-                     (encode-entry (output-encoder output) stream entry))))
-      (let ((mode (file-output-buffer-mode output)))
-        (with-lock-held ((file-output-lock output))
-          (ecase mode
-            (:none
-             (%write-direct output payload t))
-            (:line
-             (%write-direct output payload
-                            (and (> (length payload) 0)
-                                 (char= (char payload (1- (length payload))) #\Newline))))
-            (:block
-             (let* ((len (length payload))
-                    (limit (file-output-buffer-size output)))
-               ;; If payload is larger than buffer, flush current buffer and write directly.
-               (when (> len limit)
-                 (%flush-buffer output)
-                 (%write-direct output payload nil)
-                 (return-from write-entry))
-               ;; Ensure buffer stream exists
-               (%ensure-file-stream output)
-               (let ((buffer-stream (file-output-buffer-stream output)))
-                 (when (> (+ (file-output-buffer-length output) len) limit)
-                   (%flush-buffer output)
-                   (setf buffer-stream (file-output-buffer-stream output)))
-                 (write-string payload buffer-stream)
-                 (incf (file-output-buffer-length output) len)
-                 (when (>= (file-output-buffer-length output) limit)
-                   (%flush-buffer output))))))))))
+    (let ((buffer (acquire-char-buffer)))
+      (unwind-protect
+           (progn
+             (encode-entry-into-buffer (output-encoder output) entry buffer)
+            (with-lock-held ((file-output-lock output))
+              (ecase (file-output-buffer-mode output)
+                (:none
+                 (%write-direct output buffer t))
+                (:line
+                 (%write-direct output buffer
+                                (let ((last (char-buffer-last-char buffer)))
+                                  (and last (char= last #\Newline)))))
+                (:block
+                 (%write-block-entry output buffer)))))
+        (release-char-buffer buffer))))
   (values))
 
 (defmethod flush-output ((output file-output))
@@ -167,8 +167,8 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
                       (open-stream-p (file-output-stream output)))
              (force-output (file-output-stream output))
              (close (file-output-stream output))))
-      (setf (file-output-stream output) nil
-            (file-output-buffer-stream output) (when (eq (file-output-buffer-mode output) :block)
-                                                 (make-string-output-stream))
-            (file-output-buffer-length output) 0)))
+      (setf (file-output-stream output) nil)
+      (let ((buffer (file-output-buffer output)))
+        (when buffer
+          (char-buffer-clear buffer)))))
   (values))

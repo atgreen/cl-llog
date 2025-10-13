@@ -19,6 +19,7 @@
                              (:file "levels")
                              (:file "entry")
                              (:file "fields")
+                             (:file "buffer-pool")
                              (:file "logger")
                              (:file "api")
 
@@ -49,6 +50,7 @@
                              (:file "test-fields")
                              (:file "test-logger")
                              (:file "test-encoders")
+                             (:file "test-buffers")
                              (:file "test-api"))))
   :perform (test-op (o c) (symbol-call :fiveam :run! :llog)))
 

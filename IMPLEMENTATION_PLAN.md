@@ -3,7 +3,7 @@
 **Project:** LLOG - Best-in-Class Logging Framework for Common Lisp
 **Timeline:** 6 months
 **Last Updated:** 2025-10-13
-**Current Status:** Phase 2 Complete, Phase 3 In Progress
+**Current Status:** Phase 2 Complete, Phase 3 In Progress (Async logging landed)
 
 ---
 
@@ -437,47 +437,28 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 
 ### 3.3 Async Logging (Week 10)
 
-**Status:** Partially implemented, deferred pending bordeaux-threads API clarification
+**Status:** ✅ Complete
 
-**Tasks:**
-- [ ] Implement async logging with ring buffers
-  - Circular buffer for queuing entries
-  - Background writer thread
-  - Condition variables for coordination
-  - Backpressure handling
-  - Graceful shutdown
-- [ ] Resolve bordeaux-threads condition variable API
-  - Current blocker: condition-notify vs condition-variable-signal naming
-  - May need implementation-specific code or updated bt version
+**Implemented:**
+- `make-async-output` wraps any output with a bounded queue (default 1024 entries)
+- Background worker thread drains entries using bordeaux-threads condition variables
+- Backpressure handled by blocking producers when queue is full
+- Graceful shutdown via `close-output`, ensuring buffers flush before the worker joins
+- Tests cover basic async fan-out (`tests/test-outputs.lisp`) and flush semantics
 
-**Design:**
-```lisp
-(defclass async-output (output)
-  ((ring-buffer :initform (make-ring-buffer :size 4096))
-   (writer-thread :initform nil)
-   (shutdown-flag :initform nil)
-   (underlying-output :initarg :output :reader async-underlying-output)))
-
-(defmethod write-entry ((output async-output) entry)
-  ;; Non-blocking write to ring buffer
-  (ring-buffer-write (slot-value output 'ring-buffer) entry)
-  ;; Returns immediately
-  (values))
-```
-
-**Deliverables:**
-- Async output implementation
-- Background thread management
-- Benchmarks showing throughput improvement
+**Follow-ups:**
+- [ ] Throughput benchmarks under contention (planned for Phase 4)
+- [ ] Drop/delay metrics for observability (optional enhancement)
 
 ### 3.4 Condition Integration (Week 10)
 
 **Tasks:**
 - [ ] Add condition system integration (auto-capture conditions, backtraces)
   - Automatic condition field extraction
-  - Backtrace capture (SBCL, CCL, etc.)
-  - Restart information
-  - Condition chain traversal
+  - Backtrace capture (SBCL, CCL, etc.) with graceful fallback
+  - Restart information and active restart list
+  - Condition chain traversal / nested causes
+  - Tests covering SBCL + CCL behaviour
 
 **Design:**
 ```lisp
@@ -505,9 +486,10 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 
 **Tasks:**
 - [ ] Implement hook system (pre-log, post-log, error hooks)
-  - Hook registration API
-  - Hook execution (with error isolation)
-  - Common hook types
+  - Hook registration API (:pre-log, :post-log, :error)
+  - Hook execution with error isolation + logging of failures
+  - Example hooks (Sentry, metrics counter)
+  - Middleware support for field transforms
 
 **Design:**
 ```lisp
@@ -546,6 +528,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - [ ] Implement rate limiting functionality
   - Token bucket algorithm
   - Per-logger and per-call-site limits
+  - Configuration knobs via API and REPL helpers
 
 **Deliverables:**
 - Sampling implementation
@@ -559,6 +542,9 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - [ ] Create log template system (define-log-template macro)
 - [ ] Create compile-time log elimination (reader conditionals, features)
 - [ ] Add REPL integration helpers (show-recent, grep-logs, with-captured-logs)
+- [ ] Pattern layout encoder (configurable format directives)
+- [ ] Hierarchical logger naming & filters (auto detection of package/function/method)
+- [ ] Configuration save/restore & interactive config tree
 
 **Deliverables:**
 - Custom field types working
@@ -571,6 +557,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - Async logging working with high throughput
 - Hooks and extensibility demonstrated
 - All advanced features functional
+- Pattern encoder, hierarchical naming, and config persistence available
 
 ---
 
@@ -648,6 +635,7 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - [ ] Write migration guide from log4cl
 - [ ] Create performance tuning guide
 - [ ] Build example applications demonstrating usage patterns
+  - Include pattern encoder example, condition logging demo, rolling files
 
 **Deliverables:**
 - Complete documentation
@@ -705,6 +693,8 @@ This document provides a detailed, phase-by-phase plan for implementing LLOG. Ea
 - [ ] Integration with SBCL's native threads
 - [ ] Example: structured logging in web service
 - [ ] Example: high-performance logging in computation
+- [ ] Example: daily rolling file output configuration
+- [ ] Example: pattern layout configuration in production/service
 
 **Deliverables:**
 - Integration guides

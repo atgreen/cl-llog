@@ -114,3 +114,90 @@
     (otherwise
      (%write-json-string stream (prin1-to-string (field-value field)))))
   (values))
+
+;;; Buffer-based JSON encoding -------------------------------------------------
+
+(defun %json-buffer-write-string (buffer string)
+  (char-buffer-push-char buffer #\")
+  (loop for ch across string
+        for code = (char-code ch) do
+        (case ch
+          (#\" (char-buffer-push-string buffer "\\\""))
+          (#\\ (char-buffer-push-string buffer "\\\\"))
+          (#\Backspace (char-buffer-push-string buffer "\\b"))
+          (#\FormFeed (char-buffer-push-string buffer "\\f"))
+          (#\Newline (char-buffer-push-string buffer "\\n"))
+          (#\Return (char-buffer-push-string buffer "\\r"))
+          (#\Tab (char-buffer-push-string buffer "\\t"))
+          (otherwise
+           (if (< code 32)
+               (char-buffer-push-string buffer (format nil "\\u~4,'0X" code))
+               (char-buffer-push-char buffer ch)))))
+  (char-buffer-push-char buffer #\"))
+
+(defun %json-buffer-write-number (buffer number)
+  (char-buffer-push-string buffer
+                           (let ((raw (write-to-string number :readably nil :pretty nil)))
+                             (substitute #\e #\d (substitute #\E #\D raw)))))
+
+(defun %json-buffer-write-timestamp (buffer timestamp)
+  (%json-buffer-write-string buffer
+                              (with-output-to-string (s)
+                                (format-timestamp timestamp s))))
+
+(defun %json-buffer-write-condition (buffer condition)
+  (char-buffer-push-char buffer #\{)
+  (%json-buffer-write-string buffer "type")
+  (char-buffer-push-char buffer #\:)
+  (%json-buffer-write-string buffer (prin1-to-string (type-of condition)))
+  (char-buffer-push-char buffer #\,)
+  (%json-buffer-write-string buffer "message")
+  (char-buffer-push-char buffer #\:)
+  (%json-buffer-write-string buffer (princ-to-string condition))
+  (char-buffer-push-char buffer #\})
+  buffer)
+
+(defun %json-buffer-write-field-value (buffer field)
+  (case (field-type field)
+    (:string (%json-buffer-write-string buffer (field-value field)))
+    (:int (%json-buffer-write-number buffer (field-value field)))
+    (:float (%json-buffer-write-number buffer (field-value field)))
+    (:duration-ms (%json-buffer-write-number buffer (field-value field)))
+    (:bool (char-buffer-push-string buffer (if (field-value field) "true" "false")))
+    (:timestamp (%json-buffer-write-timestamp buffer (field-value field)))
+    (:error (%json-buffer-write-condition buffer (field-value field)))
+    (otherwise (%json-buffer-write-string buffer (prin1-to-string (field-value field)))))
+  buffer)
+
+(defmethod encode-entry-into-buffer ((encoder json-encoder) entry buffer)
+  (char-buffer-clear buffer)
+  (char-buffer-push-char buffer #\{)
+  (let ((first t))
+    (flet ((add-field (name writer)
+             (if first
+                 (setf first nil)
+                 (char-buffer-push-char buffer #\,))
+             (%json-buffer-write-string buffer name)
+             (char-buffer-push-char buffer #\:)
+             (funcall writer)))
+      (add-field "level"
+                 (lambda ()
+                   (%json-buffer-write-string buffer
+                                              (string-downcase (level-name (log-entry-level entry))))))
+      (add-field "ts"
+                 (lambda ()
+                   (%json-buffer-write-timestamp buffer (log-entry-timestamp entry))))
+      (when (and (log-entry-logger-name entry)
+                 (plusp (length (log-entry-logger-name entry))))
+        (add-field "logger"
+                   (lambda ()
+                     (%json-buffer-write-string buffer (log-entry-logger-name entry)))))
+      (add-field "msg"
+                 (lambda ()
+                   (%json-buffer-write-string buffer (log-entry-message entry))))
+      (dolist (field (log-entry-fields entry))
+        (add-field (field-name field)
+                   (lambda () (%json-buffer-write-field-value buffer field))))))
+  (char-buffer-push-char buffer #\})
+  (char-buffer-push-char buffer #\Newline)
+  buffer)
