@@ -31,6 +31,9 @@
 ocicl/
 .ocicl/
 
+# Data files
+data/
+
 # OS
 .DS_Store
 Thumbs.db
