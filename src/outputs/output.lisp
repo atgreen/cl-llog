@@ -30,3 +30,10 @@
 (defmethod flush-output ((output output))
   "Default flush implementation - does nothing"
   (values))
+
+(defgeneric close-output (output)
+  (:documentation "Close OUTPUT and release any resources it holds."))
+
+(defmethod close-output ((output output))
+  "Default close implementation - does nothing"
+  (values))

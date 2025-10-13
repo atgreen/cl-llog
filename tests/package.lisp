@@ -42,6 +42,9 @@
                 #:make-json-encoder
                 #:make-sexpr-encoder
                 #:make-stream-output
+                #:make-file-output
+                #:flush-output
+                #:close-output
                 #:log-entry
                 #:*logger*
                 #:info

@@ -69,6 +69,8 @@
   ;; Outputs
   (:export #:make-stream-output
            #:make-file-output
+           #:flush-output
+           #:close-output
            #:output)
 
   ;; Hooks

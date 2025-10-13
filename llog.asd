@@ -30,7 +30,8 @@
 
                              (:module "outputs"
                               :components ((:file "output")
-                                          (:file "stream"))))))
+                                          (:file "stream")
+                                          (:file "file"))))))
 
   :in-order-to ((test-op (test-op "llog/tests"))))
 
