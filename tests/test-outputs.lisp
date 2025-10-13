@@ -61,9 +61,11 @@
     (unwind-protect
          (progn
            ;; Give the worker thread time to start
-           (sleep 0.01)
+           (sleep 0.1)
            (log-entry logger (make-log-entry llog:+warn+ "async"))
            (flush-output async)
+           ;; Give worker thread time to process
+           (sleep 0.1)
            (let ((contents (get-output-stream-string stream)))
              (is (search "[WARN]" contents))
              (is (search "async" contents)))

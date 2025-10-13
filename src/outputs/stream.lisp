@@ -10,7 +10,12 @@
   ((stream
     :initarg :stream
     :accessor output-stream
-    :documentation "The stream to write to"))
+    :documentation "The stream to write to")
+   (lock
+    :initarg :lock
+    :initform (make-lock "llog/stream-output")
+    :reader stream-output-lock
+    :documentation "Lock protecting stream writes"))
   (:documentation "Output that writes to a Common Lisp stream."))
 
 (defun make-stream-output (stream &key (encoder (make-console-encoder))
@@ -32,11 +37,13 @@
   "Write a log entry to the stream."
   ;; Check if this entry meets the minimum level
   (when (level>= (log-entry-level entry) (output-min-level output))
-    (encode-entry (output-encoder output)
-                  (output-stream output)
-                  entry)
-    (force-output (output-stream output))))
+    (with-lock-held ((stream-output-lock output))
+      (encode-entry (output-encoder output)
+                    (output-stream output)
+                    entry)
+      (force-output (output-stream output)))))
 
 (defmethod flush-output ((output stream-output))
   "Flush the stream."
-  (force-output (output-stream output)))
+  (with-lock-held ((stream-output-lock output))
+    (force-output (output-stream output))))

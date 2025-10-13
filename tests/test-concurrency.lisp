@@ -122,11 +122,9 @@
     (let ((output-str (get-output-stream-string stream)))
       (is (= (* thread-count logs-per-thread)
              (count #\Newline output-str)))
-      ;; Each thread ID should appear logs-per-thread times
+      ;; Each thread ID should appear at least once
       (dotimes (i thread-count)
-        (is (>= (count (format nil "thread-id\":~D" i) output-str
-                      :test #'string=)
-               1))))))
+        (is (search (format nil "\"thread-id\":~D" i) output-str))))))
 
 (def-test concurrent-file-output ()
   "Test that file output handles concurrent writes correctly."
