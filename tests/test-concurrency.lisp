@@ -28,8 +28,7 @@
                :name (format nil "logger-~D" i))
               threads)))
     ;; Wait for all threads to complete
-    (dolist (thread threads)
-      (bt:join-thread thread))
+    (mapc #'bt:join-thread threads)
     ;; Flush output
     (flush-output output)
     ;; Verify output
@@ -60,8 +59,7 @@
              :name (format nil "level-changer-~D" i))
             threads))
     ;; Wait for all threads
-    (dolist (thread threads)
-      (bt:join-thread thread))
+    (mapc #'bt:join-thread threads)
     ;; Logger should still be functional
     (is (integerp (logger-level logger)))
     (is (member (logger-level logger)
@@ -87,8 +85,7 @@
              :name (format nil "output-manager-~D" i))
             threads))
     ;; Wait for all threads
-    (dolist (thread threads)
-      (bt:join-thread thread))
+    (mapc #'bt:join-thread threads)
     ;; Logger should still be functional
     (is (listp (logger-outputs logger)))))
 
@@ -114,8 +111,7 @@
                :name (format nil "context-logger-~D" i))
               threads)))
     ;; Wait for all threads
-    (dolist (thread threads)
-      (bt:join-thread thread))
+    (mapc #'bt:join-thread threads)
     ;; Flush output
     (flush-output output)
     ;; Verify output
@@ -153,8 +149,7 @@
                       :name (format nil "file-logger-~D" i))
                      threads)))
            ;; Wait for all threads
-           (dolist (thread threads)
-             (bt:join-thread thread))
+           (mapc #'bt:join-thread threads)
            ;; Close and flush the file
            (close-output output)
            ;; Verify the file contains all log entries
@@ -192,8 +187,7 @@
                :name (format nil "typed-logger-~D" i))
               threads)))
     ;; Wait for all threads
-    (dolist (thread threads)
-      (bt:join-thread thread))
+    (mapc #'bt:join-thread threads)
     ;; Flush output
     (flush-output output)
     ;; Verify output

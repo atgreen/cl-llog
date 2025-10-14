@@ -68,7 +68,7 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
                    ((:line) :line)
                    ((:block) :block)))
            (stream (%open-log-stream pathname))
-           (buffer (when (eq mode :block)
+           (buffer (when (eql mode :block)
                      (make-char-buffer :capacity buffer-size)))
            (lock (make-lock "llog/file-output"))
            (level (if (integerp min-level)
@@ -163,7 +163,7 @@ or :block (flush when BUFFER-SIZE is reached or on explicit flush)."
   (with-lock-held ((file-output-lock output))
     (unwind-protect
          (progn
-           (when (eq (file-output-buffer-mode output) :block)
+           (when (eql (file-output-buffer-mode output) :block)
              (%flush-buffer output))
            (when (and (file-output-stream output)
                       (open-stream-p (file-output-stream output)))

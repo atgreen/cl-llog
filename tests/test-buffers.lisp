@@ -16,7 +16,7 @@
            (is (= 3 (llog::char-buffer-length buffer)))
            (is (char= #\C (llog::char-buffer-last-char buffer)))
            (llog::char-buffer-clear buffer)
-           (is (= 0 (llog::char-buffer-length buffer))))
+           (is (zerop (llog::char-buffer-length buffer))))
       (llog::release-char-buffer buffer))))
 
 (def-test char-buffer-thread-cache ()
@@ -29,8 +29,9 @@
 
 #+sbcl
 (defmacro %bytes-consed (&body body)
+  "Measure the number of bytes consed during execution of BODY."
   `(let ((start (sb-ext:get-bytes-consed)))
-     (progn ,@body)
+     ,@body
      (- (sb-ext:get-bytes-consed) start)))
 
 #+sbcl
@@ -97,8 +98,8 @@
     (bt:join-thread thread1)
     (bt:join-thread thread2)
     ;; Both threads should have gotten their cached buffers
-    (is (not (null buffer1)))
-    (is (not (null buffer2)))))
+    (is (eql t buffer1))
+    (is (eql t buffer2))))
 
 (def-test buffer-push-operations ()
   "Test various buffer push operations."

@@ -13,9 +13,11 @@
     (is (should-log-p logger llog:+info+))))
 
 (defun %string-output ()
+  "Create a string output stream for testing."
   (make-string-output-stream))
 
 (defun %logger-with-stream (stream &key (encoder (make-console-encoder)))
+  "Create a test logger that writes to STREAM using ENCODER."
   (let ((output (make-stream-output stream :encoder encoder)))
     (make-logger :name "test" :level :trace :outputs (list output))))
 

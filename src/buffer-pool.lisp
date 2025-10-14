@@ -9,7 +9,7 @@
 
 (defstruct buffer-pool
   (lock (make-lock "llog/buffer-pool") :type t)
-  (buffers '() :type list)
+  (buffers nil :type list)
   (buffer-size 8192 :type fixnum)
   (max-buffers 32 :type fixnum))
 

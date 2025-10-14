@@ -32,16 +32,15 @@
 
 (def-test capture-restarts-basic ()
   "Test that restart information can be captured."
-  (block test
-    (restart-case
-        (let ((restarts (llog::capture-restarts)))
-          (is (listp restarts))
-          (is (> (length restarts) 0))
-          ;; Should include at least the abort restart
-          (is (member 'abort (mapcar (lambda (r) (getf r :name)) restarts))))
-      (test-restart ()
-        :report "Test restart for testing"
-        (return-from test t)))))
+  (restart-case
+      (let ((restarts (llog::capture-restarts)))
+        (is (listp restarts))
+        (is (> (length restarts) 0))
+        ;; Should include at least the abort restart
+        (is (member 'abort (mapcar (lambda (r) (getf r :name)) restarts))))
+    (test-restart ()
+      :report "Test restart for testing"
+      t)))
 
 (def-test capture-restarts-names ()
   "Test that custom restart names are captured."
@@ -69,10 +68,10 @@
         (is (eq (llog:condition-info-type info) 'simple-error))
         (is (string= (llog:condition-info-message info) "Test error"))
         ;; Default options should capture backtrace
-        (is (not (null (llog:condition-info-backtrace info))))
+        (is (llog:condition-info-backtrace info))
         (is (listp (llog:condition-info-backtrace info)))
         ;; Default options should capture restarts
-        (is (not (null (llog:condition-info-restarts info))))))))
+        (is (llog:condition-info-restarts info))))))
 
 (def-test analyze-condition-no-backtrace ()
   "Test that backtrace can be disabled."
@@ -139,7 +138,7 @@
       (let ((field (llog:error-field-detailed "error" condition)))
         (is (typep field 'llog::field))
         (is (string= (llog::field-name field) "error"))
-        (is (eq (llog::field-type field) :error-detailed))
+        (is (eql (llog::field-type field) :error-detailed))
         (is (llog:condition-info-p (llog::field-value field)))))))
 
 (def-test error-field-detailed-options ()
@@ -153,7 +152,7 @@
                                                :chain nil))
              (info (llog::field-value field)))
         (is (null (llog:condition-info-backtrace info)))
-        (is (not (null (llog:condition-info-restarts info))))
+        (is (llog:condition-info-restarts info))
         (is (null (llog:condition-info-cause info)))))))
 
 ;;; Encoder Integration Tests

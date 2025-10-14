@@ -18,7 +18,7 @@
                          ,level
                          ,message
                          :logger-name (logger-name logger)
-                         :fields ,(or fields-form nil))))
+                         :fields ,fields-form)))
              (log-entry logger entry)))))))
 
 (defmacro trace (message &rest keyword-args)

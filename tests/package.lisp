@@ -2,6 +2,7 @@
 ;;;; SPDX-License-Identifier: MIT
 
 (defpackage #:llog/tests
+  (:documentation "Test suite for the LLOG logging framework.")
   (:use #:cl #:fiveam)
   ;; Use shadowing-import for symbols that conflict with CL
   (:shadowing-import-from #:llog

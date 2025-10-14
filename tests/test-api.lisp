@@ -6,6 +6,7 @@
 (in-suite :llog)
 
 (defun %capture-log-output (thunk)
+  "Capture log output by calling THUNK with a test logger."
   (let ((stream (make-string-output-stream)))
     (let ((llog:*logger* (%logger-with-stream stream)))
       (funcall thunk)
