@@ -61,7 +61,19 @@
                 #:+debug+
                 #:+info+
                 #:+warn+
-                #:+error+))
+                #:+error+
+                #:+fatal+
+                ;; Hook system
+                #:hook
+                #:hook-p
+                #:hook-type
+                #:hook-function
+                #:hook-name
+                #:hook-priority
+                #:add-hook
+                #:remove-hook
+                #:clear-hooks
+                #:list-hooks))
 
 (in-package #:llog/tests)
 

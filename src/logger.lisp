@@ -30,6 +30,31 @@
     :accessor logger-context-fields
     :type list
     :documentation "Fields that are added to every log entry")
+   (pre-log-hooks
+    :initarg :pre-log-hooks
+    :initform nil
+    :type list
+    :documentation "Hooks called before logging (can modify or filter entries)")
+   (post-log-hooks
+    :initarg :post-log-hooks
+    :initform nil
+    :type list
+    :documentation "Hooks called after logging (for notifications, metrics)")
+   (error-hooks
+    :initarg :error-hooks
+    :initform nil
+    :type list
+    :documentation "Hooks called when logging errors occur")
+   (sampling-configs
+    :initarg :sampling-configs
+    :initform (make-hash-table :test 'eql)
+    :type hash-table
+    :documentation "Sampling configuration per level (level -> sampling-config)")
+   (rate-limiters
+    :initarg :rate-limiters
+    :initform (make-hash-table :test 'eql)
+    :type hash-table
+    :documentation "Rate limiters per level (level -> rate-limiter)")
    (lock
     :initarg :lock
     :initform (make-lock "llog/logger")
@@ -100,12 +125,35 @@
             (remove output (slot-value logger 'outputs))))
   logger)
 
+;;; Forward Declarations for Sampling and Rate Limiting
+;;; (These functions are defined in sampling.lisp and rate-limiting.lisp)
+
+(declaim (ftype (function (t) t) should-sample-p))
+(declaim (ftype (function (t t) t) record-sampling-decision))
+(declaim (ftype (function (t t) t) get-sampling-config-for-level))
+(declaim (ftype (function (t t t) t) set-sampling-config-for-level))
+(declaim (ftype (function (t) t) try-take-token))
+(declaim (ftype (function (t t) t) get-rate-limiter-for-level))
+(declaim (ftype (function (t t t) t) set-rate-limiter-for-level))
+(declaim (ftype (function (t) t) sampling-config-stats))
+(declaim (ftype (function (t) t) rate-limiter-stats))
+(declaim (ftype (function (t) t) rate-limiter-lock))
+(declaim (ftype (function (t) t) rate-limiter-tokens))
+(declaim (ftype (function (t) t) make-probabilistic-sampler))
+(declaim (ftype (function (t) t) make-deterministic-sampler))
+(declaim (ftype (function (t) t) make-rate-limiter-config))
+(declaim (ftype (function (t) t) make-rate-limiter-per-minute))
+(declaim (ftype (function (t) t) make-rate-limiter-per-hour))
+
 ;;; Core Logging Function
 
 (defun log-entry (logger entry)
-  "Log an ENTRY using LOGGER. Writes to all configured outputs."
+  "Log an ENTRY using LOGGER. Writes to all configured outputs.
+   Calls pre-log hooks (which can modify or filter the entry),
+   writes to outputs, then calls post-log hooks.
+   If errors occur, error hooks are called."
   (declare (type logger logger)
-           (type log-entry entry)
+           (type (or null log-entry) entry)
            (optimize speed))
   (let (context-fields logger-name outputs)
     (with-lock-held ((logger-lock logger))
@@ -121,12 +169,42 @@
                (string= (log-entry-logger-name entry) ""))
       (setf (log-entry-logger-name entry) logger-name))
 
-    (dolist (output outputs)
-      (handler-case
-          (write-entry output entry)
-        (cl:error (e)
-          ;; Never let logging errors crash the application
-          (format *error-output* "~&Logging error: ~A~%" e)))))
+    ;; Apply sampling (filter out if not sampled)
+    (let* ((level (log-entry-level entry))
+           (sampling-config (get-sampling-config-for-level logger level)))
+      (when sampling-config
+        (let ((should-log (should-sample-p sampling-config)))
+          (record-sampling-decision sampling-config should-log)
+          (unless should-log
+            (setf entry nil)))))
+
+    ;; Apply rate limiting (filter out if rate limited)
+    (when entry
+      (let* ((level (log-entry-level entry))
+             (rate-limiter (get-rate-limiter-for-level logger level)))
+        (when (and rate-limiter (not (try-take-token rate-limiter)))
+          (setf entry nil))))
+
+    ;; Call pre-log hooks (can modify or filter entry)
+    (when entry
+      (setf entry (%call-pre-log-hooks logger entry)))
+
+    ;; If pre-log hooks filtered the entry (returned nil), skip logging
+    (when entry
+      (let ((error-occurred nil))
+        (dolist (output outputs)
+          (handler-case
+              (write-entry output entry)
+            (cl:error (e)
+              (setf error-occurred t)
+              ;; Call error hooks
+              (%call-error-hooks logger e entry)
+              ;; Never let logging errors crash the application
+              (format *error-output* "~&Logging error: ~A~%" e))))
+
+        ;; Call post-log hooks if no errors occurred
+        (unless error-occurred
+          (%call-post-log-hooks logger entry)))))
 
   (values))
 
@@ -166,3 +244,95 @@
                    :outputs outputs
                    :context-fields context
                    :lock (logger-lock parent-logger))))
+
+;;; Sampling API
+
+(defun set-sampling (logger level-designator probability-or-mode &optional n)
+  "Configure sampling for LOGGER at LEVEL-DESIGNATOR.
+
+   Probabilistic sampling:
+     (set-sampling logger :debug 0.1)  ; 10% sample rate
+
+   Deterministic sampling:
+     (set-sampling logger :debug :every 100)  ; every 100th log
+
+   Clear sampling:
+     (set-sampling logger :debug nil)"
+  (let ((level (parse-level level-designator)))
+    (unless level
+      (cl:error "Invalid log level: ~S" level-designator))
+    (cond
+      ;; Clear sampling
+      ((null probability-or-mode)
+       (set-sampling-config-for-level logger level nil))
+      ;; Deterministic sampling: :every N
+      ((and (eql probability-or-mode :every) n)
+       (let ((config (make-deterministic-sampler n)))
+         (set-sampling-config-for-level logger level config)))
+      ;; Probabilistic sampling: probability
+      ((numberp probability-or-mode)
+       (let ((config (make-probabilistic-sampler probability-or-mode)))
+         (set-sampling-config-for-level logger level config)))
+      (t
+       (cl:error "Invalid sampling configuration: ~S ~S" probability-or-mode n)))
+    logger))
+
+(defun clear-sampling (logger level-designator)
+  "Clear sampling configuration for LOGGER at LEVEL-DESIGNATOR."
+  (set-sampling logger level-designator nil))
+
+(defun get-sampling-stats (logger level-designator)
+  "Get sampling statistics for LOGGER at LEVEL-DESIGNATOR."
+  (let* ((level (parse-level level-designator))
+         (config (get-sampling-config-for-level logger level)))
+    (sampling-config-stats config)))
+
+;;; Rate Limiting API
+
+(defun set-rate-limit (logger level-designator max-logs time-unit)
+  "Configure rate limiting for LOGGER at LEVEL-DESIGNATOR.
+
+   TIME-UNIT can be :per-second, :per-minute, or :per-hour.
+
+   Examples:
+     (set-rate-limit logger :error 100 :per-second)
+     (set-rate-limit logger :warn 10 :per-minute)
+
+   Clear rate limiting:
+     (set-rate-limit logger :error nil nil)"
+  (let ((level (parse-level level-designator)))
+    (unless level
+      (cl:error "Invalid log level: ~S" level-designator))
+    (cond
+      ;; Clear rate limiting
+      ((null max-logs)
+       (set-rate-limiter-for-level logger level nil))
+      ;; Set rate limiting
+      ((and (numberp max-logs) (plusp max-logs))
+       (let ((limiter (ecase time-unit
+                        (:per-second (make-rate-limiter-config max-logs))
+                        (:per-minute (make-rate-limiter-per-minute max-logs))
+                        (:per-hour (make-rate-limiter-per-hour max-logs)))))
+         (set-rate-limiter-for-level logger level limiter)))
+      (t
+       (cl:error "Invalid rate limit: ~S ~S" max-logs time-unit)))
+    logger))
+
+(defun clear-rate-limit (logger level-designator)
+  "Clear rate limiting configuration for LOGGER at LEVEL-DESIGNATOR."
+  (set-rate-limit logger level-designator nil nil))
+
+(defun get-rate-limit-stats (logger level-designator)
+  "Get rate limiting statistics for LOGGER at LEVEL-DESIGNATOR."
+  (let* ((level (parse-level level-designator))
+         (limiter (get-rate-limiter-for-level logger level)))
+    (rate-limiter-stats limiter)))
+
+(defun rate-limited-p (logger level-designator)
+  "Return T if LOGGER is currently rate limited at LEVEL-DESIGNATOR."
+  (let* ((level (parse-level level-designator))
+         (limiter (get-rate-limiter-for-level logger level)))
+    (if (null limiter)
+        nil
+        (with-lock-held ((rate-limiter-lock limiter))
+          (< (rate-limiter-tokens limiter) 1.0)))))

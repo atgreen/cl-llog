@@ -20,6 +20,10 @@
                              (:file "fields")
                              (:file "buffer-pool")
                              (:file "logger")
+                             (:file "hierarchy")
+                             (:file "hooks")
+                             (:file "sampling")
+                             (:file "rate-limiting")
                              (:file "api")
                              (:file "conditions")
 
@@ -27,7 +31,8 @@
                               :components ((:file "encoder")
                                           (:file "console")
                                           (:file "json")
-                                          (:file "sexpr")))
+                                          (:file "sexpr")
+                                          (:file "pattern")))
 
                              (:module "outputs"
                               :components ((:file "output")
@@ -55,7 +60,12 @@
                              (:file "test-outputs")
                              (:file "test-concurrency")
                              (:file "test-api")
-                             (:file "test-conditions"))))
+                             (:file "test-conditions")
+                             (:file "test-hooks")
+                             (:file "test-sampling")
+                             (:file "test-rate-limiting")
+                             (:file "test-hierarchy")
+                             (:file "test-pattern"))))
   :perform (test-op (o c) (symbol-call :fiveam :run! :llog)))
 
 

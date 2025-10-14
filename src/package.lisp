@@ -88,10 +88,20 @@
            #:add-output
            #:remove-output)
 
+  ;; Hierarchical loggers
+  (:export #:get-logger
+           #:find-logger
+           #:clear-logger-registry
+           #:list-loggers
+           #:set-logger-level-recursive
+           #:root-logger
+           #:set-root-level)
+
   ;; Encoders
   (:export #:make-console-encoder
            #:make-json-encoder
            #:make-sexpr-encoder
+           #:make-pattern-encoder
            #:encoder)
 
   ;; Outputs
@@ -103,9 +113,27 @@
            #:output)
 
   ;; Hooks
-  (:export #:add-hook
+  (:export #:hook
+           #:hook-p
+           #:hook-type
+           #:hook-function
+           #:hook-name
+           #:hook-priority
+           #:add-hook
            #:remove-hook
-           #:hook)
+           #:clear-hooks
+           #:list-hooks)
+
+  ;; Sampling
+  (:export #:set-sampling
+           #:clear-sampling
+           #:get-sampling-stats)
+
+  ;; Rate Limiting
+  (:export #:set-rate-limit
+           #:clear-rate-limit
+           #:get-rate-limit-stats
+           #:rate-limited-p)
 
   ;; REPL helpers
   (:export #:show-recent
