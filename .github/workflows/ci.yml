@@ -10,55 +10,49 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install SBCL
+      - name: Setup SBCL and ocicl
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sbcl
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install sbcl ocicl
+          ocicl setup >> ~/.sbclrc
 
-      - name: Install ocicl
+      - name: Install dependencies
         run: |
-          curl -sL https://github.com/ocicl/ocicl/releases/latest/download/install.sh | bash
-          echo "$HOME/bin" >> $GITHUB_PATH
-
-      - name: Setup ocicl
-        run: |
-          ocicl setup
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          ocicl install
 
       - name: Run linter
         run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           ocicl lint src/ tests/
 
   test:
     name: Test Suite
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        lisp: [sbcl]
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install SBCL
+      - name: Setup SBCL and ocicl
         run: |
-          sudo apt-get update
-          sudo apt-get install -y sbcl
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+          brew install sbcl ocicl
+          ocicl setup >> ~/.sbclrc
 
-      - name: Install ocicl
+      - name: Install dependencies
         run: |
-          curl -sL https://github.com/ocicl/ocicl/releases/latest/download/install.sh | bash
-          echo "$HOME/bin" >> $GITHUB_PATH
-
-      - name: Setup ocicl and install dependencies
-        run: |
-          ocicl setup
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           ocicl install
 
       - name: Run tests
         run: |
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           sbcl --noinform --non-interactive \
             --eval '(asdf:test-system :llog)' \
             2>&1 | tee test-output.txt
