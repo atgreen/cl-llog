@@ -423,8 +423,8 @@ See `examples/sampling-examples.lisp` for 10 real-world examples including cost 
 | Buffer pooling | ✓ | ✓ | ✗ | ✓ |
 | Thread-local caching | ✓ | ✓ | ✗ | ✓ |
 | Async logging | ✓ | ✗ | ✗ | ✓ |
-| Hierarchical loggers | ✗ | ✗ | ✓ | ✓ (planned) |
-| Pattern layouts | ✗ | ✗ | ✓ | ✓ (planned) |
+| Hierarchical loggers | ✗ | ✗ | ✓ | ✓ |
+| Pattern layouts | ✗ | ✗ | ✓ | ✓ |
 | Thread-safe | ✓ | ✓ | ✓ | ✓ |
 | JSON output | ✓ | ✓ | ✓ | ✓ |
 | Hook system | ✗ | ✓ | ✗ | ✓ |
