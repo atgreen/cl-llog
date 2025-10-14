@@ -57,13 +57,15 @@
   "Extract the cause of CONDITION if it has one.
    Attempts to find nested/wrapped conditions."
   ;; Many condition systems store causes in slots, but there's no standard
-  ;; Check common slot names
-  (loop for slot-name in '(cause parent wrapped-condition original-condition)
-        for value = (handler-case
-                        (slot-value condition slot-name)
-                      (error () nil))
-        when value
-          return value
+  ;; Check common slot names using string names to avoid package issues
+  (loop for slot-name-string in '("CAUSE" "PARENT" "WRAPPED-CONDITION" "ORIGINAL-CONDITION")
+        for slot-symbol = (find-symbol slot-name-string (symbol-package (type-of condition)))
+        when (and slot-symbol
+                  (slot-exists-p condition slot-symbol)
+                  (slot-boundp condition slot-symbol))
+          do (let ((value (slot-value condition slot-symbol)))
+               (when value
+                 (return value)))
         finally (return nil)))
 
 (defun condition-chain (condition)
