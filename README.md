@@ -3,24 +3,9 @@
 **High-Performance Structured Logging for Common Lisp**
 
 llog is a modern, high-performance structured logging framework for
-Common Lisp, inspired by the best practices from the Go ecosystem
-(zap, zerolog, logrus).
-
-## Status
-
-🚧 **Under Active Development** - v0.1.0
-
-## Performance Highlights
-
-- **333K logs/second** throughput (SBCL, typed API)
-- **92-94% allocation reduction** (typed API vs sugared API)
-- **2KB per log call** with typed API
-- **Thread-local buffer caching** with >95% hit rate
-- **100% test pass rate** (723/723 checks)
+Common Lisp.
 
 ## Features
-
-### Implemented ✓
 
 - **Dual API**: Ergonomic sugared API and zero-allocation typed API
 - **Structured Logging**: First-class support for key-value fields with type preservation
@@ -97,7 +82,7 @@ ocicl install llog
 ### Manual
 
 ```bash
-git clone https://github.com/yourusername/llog.git
+git clone https://github.com/atgreen/cl-llog.git
 cd llog
 ```
 
@@ -637,13 +622,10 @@ Test coverage includes:
 - Throughput: 333,333 logs/second
 - Per-call latency: ~3μs (typed API)
 
-## Contributing
+## Author and License
 
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+llog was written by [Anthony Green](https://github.com/atgreen), and
+is distributed under the terms of the MIT license.
 
 ## Acknowledgments
 
@@ -659,5 +641,5 @@ llog combines the best of both worlds:
 
 ## Contact
 
-- Issues: [GitHub Issues](https://github.com/yourusername/llog/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/llog/discussions)
+- Issues: [GitHub Issues](https://github.com/atgreen/cl-llog/issues)
+- Discussions: [GitHub Discussions](https://github.com/atgreen/cl-llog/discussions)
