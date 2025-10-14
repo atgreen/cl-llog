@@ -11,10 +11,10 @@
 
 LLOG is a modern, high-performance structured logging framework for Common Lisp, inspired by best practices from the Go ecosystem (zap, zerolog, logrus) while maintaining REPL-friendly features from the Common Lisp tradition (log4cl).
 
-**Current Implementation Status:** Phase 3 nearly complete
+**Current Implementation Status:** Phase 3 complete
 - ✅ Phase 1: Foundation (100%)
 - ✅ Phase 2: Structured Logging (100%)
-- ⚠️ Phase 3: Advanced Features (86% - 6/7 sub-phases complete)
+- ✅ Phase 3: Advanced Features (100% - 7/7 sub-phases complete)
 - 🚧 Phase 4: Quality and Performance (in progress)
 - 📋 Phase 5: Release and Community (planned)
 
@@ -150,14 +150,19 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 - 20 comprehensive tests
 - 10 real-world examples in examples/sampling-examples.lisp
 
-### Planned Features 📋
-
 #### FR-13: REPL Integration
-**Status:** 📋 Planned (Phase 3.7)
-- `show-recent` - View recent logs
-- `grep-logs` - Search log history
-- `with-captured-logs` - Capture for testing
-- Interactive configuration
+**Status:** ✅ Complete (Phase 3.7)
+- Recent logs circular buffer with enable/disable control
+- `show-recent` with filtering by level, logger name, and regex patterns (case-insensitive)
+- `grep-logs` for searching log entries with regex support
+- `with-captured-logs` macro for testing log output
+- `define-field-type` macro for custom field types with validation/coercion
+- Thread-safe circular buffer implementation
+- Hook-based recording via post-log integration
+- 17 comprehensive tests
+- Full coverage of buffer operations, filtering, capture, and custom types
+
+### Planned Features 📋
 
 #### FR-14: Pattern Layout Encoder
 **Status:** 📋 Planned (Phase 3.7)
@@ -193,7 +198,7 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 
 #### NFR-4: Test Coverage
 **Target:** >90% code coverage
-**Current:** ⚠️ 100% pass rate (544/544 tests), coverage analysis pending
+**Current:** ✅ 100% pass rate (723/723 tests), coverage analysis pending
 
 #### NFR-5: Code Quality
 **Target:** Zero linting issues
@@ -220,7 +225,7 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 ### Technical Metrics
 - ✅ Throughput: 333K logs/second (target: >300K)
 - ✅ Allocation reduction: 92-94% (target: >90%)
-- ✅ Test pass rate: 97% (561/574 checks, target: 100%)
+- ✅ Test pass rate: 100% (723/723 checks, target: 100%)
 - ✅ Linting: 0 issues (target: 0)
 - ⚠️ Code coverage: TBD (target: >90%)
 
@@ -241,7 +246,10 @@ LLOG is a modern, high-performance structured logging framework for Common Lisp,
 - Condition integration
 - Hook system
 - Sampling and rate limiting
-- 97% test pass rate (561/574)
+- REPL integration
+- Hierarchical loggers
+- Pattern layouts
+- 100% test pass rate (723/723)
 
 ### v1.0.0 (Target: Phase 5)
 - All Phase 3 features complete
@@ -915,6 +923,8 @@ Advanced features for specific use cases: compliance, debugging, performance ana
 
 Cryptographic append-only audit logs with hash chaining and periodic signed checkpoints for compliance and forensics.
 
+**Important:** This feature makes logs **tamper-evident**, not tamper-proof. It detects unauthorized modifications after the fact but does not prevent them. An attacker with filesystem access can still modify logs, but the hash chain will reveal the tampering during verification. True tamper-proofing requires additional measures like write-once media, immediate external replication, or hardware security modules.
+
 **Capabilities:**
 - SHA-256 hash chaining (each record hashes previous)
 - Periodic checkpoints with digital signatures
@@ -1531,6 +1541,22 @@ Capture the full restart decision tree as structured breadcrumbs during conditio
 ---
 
 ## Changelog
+
+### 2025-10-14
+- Updated status: Phase 3.7 (REPL Integration) complete
+- Updated status: Phase 3 complete (100% - 7/7 sub-phases)
+- Added FR-13: REPL Integration implementation details
+- Updated metrics: 100% test pass rate (723/723 checks)
+- REPL features: show-recent, grep-logs, with-captured-logs, define-field-type
+- Thread-safe circular buffer for recent logs with hook-based recording
+- Case-insensitive regex pattern matching via cl-ppcre
+- Custom field type system with validation and coercion
+- 17 comprehensive tests in test-repl.lisp
+- Added dependency: cl-ppcre for regex support
+- Updated README with lowercase "llog" branding
+- Added comprehensive REPL Integration documentation section
+- Updated comparison table: REPL integration marked as ✓
+- Clarified FR-26: tamper-evident vs tamper-proof distinction
 
 ### 2025-10-13 (Evening)
 - Updated status: Phase 3.6 (Sampling and Rate Limiting) complete
