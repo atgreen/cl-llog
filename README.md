@@ -16,7 +16,7 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **92-94% allocation reduction** (typed API vs sugared API)
 - **2KB per log call** with typed API
 - **Thread-local buffer caching** with >95% hit rate
-- **100% test pass rate** (534/534 checks)
+- **100% test pass rate** (579/579 checks)
 
 ## Features
 
@@ -34,23 +34,8 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **Buffer Pool**: Thread-local caching with 92% allocation reduction (typed API vs sugared API)
 - **File Buffering**: Configurable buffering strategies (:none, :line, :block)
 - **Condition System Integration**: Enhanced error fields with backtrace capture, restart information, and condition chains
-
-### In Progress 🚧
-
-- Hierarchical logger naming (package.function.method auto-detection)
-- Pattern layout encoder (configurable format strings)
-- Daily rolling file appenders
-
-### Planned 📋
-
-- Hook system for extensibility (Phase 3.5)
-- Sampling and rate limiting (Phase 3.6)
-- REPL integration helpers: show-recent, grep-logs, with-captured-logs (Phase 3.7)
-- Log templates: define-log-template macro (Phase 3.7)
-- Custom field types: define-field-type macro (Phase 3.7)
-- Compile-time log elimination (Phase 3.7)
-- Configuration save/restore
-- Editor integration (Emacs/VSCode support)
+- **Hook System**: Extensible hooks for pre-log filtering/modification, post-log notifications, and error handling
+- **Sampling and Rate Limiting**: Control log volume with probabilistic/deterministic sampling and token bucket rate limiting
 
 ## Quick Start
 
@@ -275,6 +260,152 @@ Use `error-field-detailed` to capture comprehensive condition information:
 ;; The logged error will include both the outer and inner conditions
 ```
 
+## Hook System
+
+LLOG provides a powerful hook system for extending logger behavior without modifying core code. Hooks can filter entries, transform fields, collect metrics, send notifications, or integrate with external services.
+
+### Hook Types
+
+- **`:pre-log`** - Called before logging; can modify or filter entries
+- **`:post-log`** - Called after successful logging; for metrics, notifications
+- **`:error`** - Called when logging errors occur; for error reporting
+
+### Basic Usage
+
+```lisp
+;; Add a metrics counter
+(llog:add-hook *logger* :post-log
+  (lambda (logger entry)
+    (declare (ignore logger))
+    (when (>= (llog:log-entry-level entry) llog:+error+)
+      (incf *error-count*)))
+  :name 'error-counter
+  :priority 50)
+
+;; Filter entries in production
+(llog:add-hook *logger* :pre-log
+  (lambda (logger entry)
+    (declare (ignore logger))
+    (if (< (llog:log-entry-level entry) llog:+info+)
+        nil  ; Filter out TRACE and DEBUG
+        entry))
+  :name 'production-filter
+  :priority 10)
+
+;; Redact sensitive fields
+(llog:add-hook *logger* :pre-log
+  (lambda (logger entry)
+    (declare (ignore logger))
+    ;; Modify entry fields to redact passwords
+    (setf (llog:log-entry-fields entry)
+          (loop for field in (llog:log-entry-fields entry)
+                if (string= "password" (llog::field-key field))
+                  collect (llog:string "password" "***REDACTED***")
+                else
+                  collect field))
+    entry)
+  :name 'redactor
+  :priority 5)
+
+;; Remove hooks
+(llog:remove-hook *logger* :pre-log :name 'production-filter)
+(llog:clear-hooks *logger* :post-log)  ; Clear all post-log hooks
+```
+
+### Features
+
+- **Priority-Based Execution**: Lower priority numbers run first (default: 50)
+- **Error Isolation**: Hook failures don't crash logging
+- **Entry Filtering**: Pre-log hooks can return NIL to skip logging
+- **Entry Modification**: Pre-log hooks can transform fields
+- **Multiple Hooks**: Chain multiple hooks of the same type
+
+### Example Hooks
+
+See `examples/hooks.lisp` for 10 complete hook examples:
+- Metrics counter (track logs by level)
+- Sampling (log every Nth entry)
+- Field redaction (PII protection)
+- Context enrichment (add hostname, thread info)
+- Performance profiling (track timing between logs)
+- Error alerting (send notifications for critical errors)
+- Circular buffer (keep recent logs in memory)
+
+### Hook API
+
+```lisp
+;; Add a hook
+(add-hook logger type function &key name priority)
+
+;; Remove hooks
+(remove-hook logger type &key name function)
+(clear-hooks logger &optional type)
+
+;; List hooks
+(list-hooks logger &optional type)
+
+;; Hook properties
+(hook-type hook)      ; => :pre-log | :post-log | :error
+(hook-function hook)  ; => #<FUNCTION ...>
+(hook-name hook)      ; => name or NIL
+(hook-priority hook)  ; => integer (default 50)
+```
+
+## Sampling and Rate Limiting
+
+LLOG provides built-in sampling and rate limiting to control log volume in high-throughput applications.
+
+### Sampling
+
+Reduce log volume by logging only a subset of events:
+
+```lisp
+;; Probabilistic sampling - log 10% of DEBUG messages
+(llog:set-sampling *logger* :debug 0.1)
+
+;; Deterministic sampling - log every 100th INFO message
+(llog:set-sampling *logger* :info :every 100)
+
+;; Clear sampling
+(llog:clear-sampling *logger* :debug)
+
+;; Get statistics
+(llog:get-sampling-stats *logger* :debug)
+;; => (:total 10000 :sampled 1000 :dropped 9000 :rate 0.1)
+```
+
+### Rate Limiting
+
+Prevent log storms using token bucket rate limiting:
+
+```lisp
+;; Allow maximum 100 ERROR logs per second
+(llog:set-rate-limit *logger* :error 100 :per-second)
+
+;; Allow maximum 10 WARN logs per minute
+(llog:set-rate-limit *logger* :warn 10 :per-minute)
+
+;; Clear rate limit
+(llog:clear-rate-limit *logger* :error)
+
+;; Check if currently rate limited
+(llog:rate-limited-p *logger* :error)  ; => T or NIL
+
+;; Get statistics
+(llog:get-rate-limit-stats *logger* :error)
+;; => (:total 500 :allowed 100 :dropped 400 :rate 0.2
+;;     :current-tokens 5 :capacity 100 :refill-rate 100.0)
+```
+
+### Use Cases
+
+- **High-traffic services**: Sample 1% of INFO logs, rate limit WARNs
+- **Batch processing**: Log every 1000th record processed
+- **Production debugging**: Temporarily increase sampling for investigation
+- **Cost control**: Reduce log storage costs by 90%+ in high-volume scenarios
+
+See `examples/sampling-examples.lisp` for 10 real-world examples including cost analysis, dynamic sampling, and monitoring strategies.
+
 ## Documentation
 
 - [Buffer Pool System](docs/buffer-pool.md) - Thread-local caching and memory management
@@ -296,7 +427,8 @@ Use `error-field-detailed` to capture comprehensive condition information:
 | Pattern layouts | ✗ | ✗ | ✓ | ✓ (planned) |
 | Thread-safe | ✓ | ✓ | ✓ | ✓ |
 | JSON output | ✓ | ✓ | ✓ | ✓ |
-| Hook system | ✗ | ✓ | ✗ | ✓ (planned) |
+| Hook system | ✗ | ✓ | ✗ | ✓ |
+| Sampling/Rate limiting | ✗ | ✗ | ✗ | ✓ |
 | REPL integration | N/A | N/A | ✓ | ✓ (planned) |
 | Condition system | N/A | N/A | ✗ | ✓ |
 
@@ -308,7 +440,7 @@ Use `error-field-detailed` to capture comprehensive condition information:
 (asdf:test-system :llog)
 ```
 
-**Current Test Status**: 534 checks, 100% pass rate (all passing)
+**Current Test Status**: 579 checks, 100% pass rate (all passing)
 
 Test coverage includes:
 - Log levels and filtering
@@ -322,6 +454,9 @@ Test coverage includes:
 - File output with multiple buffering modes
 - Async output with background worker thread
 - Condition system integration (backtrace capture, restart info, condition chains)
+- Hook system (pre-log, post-log, error hooks with priority and isolation)
+- Sampling (probabilistic and deterministic)
+- Rate limiting (token bucket with time-based refill)
 
 ### Running Benchmarks
 
