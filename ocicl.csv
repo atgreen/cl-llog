@@ -1,5 +1,7 @@
 alexandria, ghcr.io/ocicl/alexandria@sha256:e433c2e076ed3bcf8641b97b00192680db2201d305efac9293539dee88c7fbf7, alexandria-20240503-8514d8e/alexandria.asd
 bordeaux-threads, ghcr.io/ocicl/bordeaux-threads@sha256:bbb32afe3987e102149cc019f4f7366a05f7a37d1503f5f86a27745e671c320a, bordeaux-threads-0.9.4/bordeaux-threads.asd
+cl-ppcre, ghcr.io/ocicl/cl-ppcre@sha256:bf073924cf4fd5957a4fd961a95d446ed0e53fa32a5002cbd2d52182874f45e5, cl-ppcre-20250606-a2ea581/cl-ppcre.asd
+cl-ppcre-unicode, ghcr.io/ocicl/cl-ppcre@sha256:bf073924cf4fd5957a4fd961a95d446ed0e53fa32a5002cbd2d52182874f45e5, cl-ppcre-20250606-a2ea581/cl-ppcre-unicode.asd
 documentation-utils, ghcr.io/ocicl/documentation-utils@sha256:b2a1b3f3bcd1a738af85ae2b0168d408c177661eab6d6bbebb254e394d983f54, documentation-utils-20230511-98630dd/documentation-utils.asd
 fiveam, ghcr.io/ocicl/fiveam@sha256:e283043dc8d31e8df2b214465cf5a06ea07bdbea10e600a40e17aaf9518226ac, fiveam-20240928-e43d6c8/fiveam.asd
 global-vars, ghcr.io/ocicl/global-vars@sha256:d197e871c9c9abc4bf31b1186f5fd28f0ca848ebe2e9dddf2d82ecee01dbdc65, global-vars-20240503-c749f32/global-vars.asd
