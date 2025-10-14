@@ -261,15 +261,6 @@ Complete API documentation is available in [docs/api/](docs/api/):
 - **[Condition System](docs/api/conditions.md)** - Rich error logging with backtraces
 - **[REPL Integration](docs/api/repl.md)** - Interactive development features
 
-### Implementation Details
-
-- [Buffer Pool System](docs/buffer-pool.md) - Thread-local caching and memory management
-- [Buffer Pool Design](docs/buffer-pool-design.md) - Design decisions and benchmarks
-
-## Test Status
-
-**723/723 tests passing (100%)** - Production-ready implementation
-
 ## Performance
 
 - **Typed API**: 92% allocation reduction vs sugared API
