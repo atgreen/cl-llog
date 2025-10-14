@@ -55,6 +55,7 @@ jobs:
           eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           sbcl --noinform --non-interactive \
             --eval '(asdf:test-system :llog)' \
+            --eval '(asdf:test-system :llog-audit)' \
             2>&1 | tee test-output.txt
 
       - name: Check test results
