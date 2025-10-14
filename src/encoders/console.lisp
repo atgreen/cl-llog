@@ -108,5 +108,31 @@
        (format stream "~A (~A)"
                (princ-to-string condition)
                (type-of condition))))
+    (:error-detailed
+     (let ((info (field-value field)))
+       (format stream "~A (~A)"
+               (condition-info-message info)
+               (condition-info-type info))
+       (when (condition-info-backtrace info)
+         (terpri stream)
+         (write-string "    Backtrace:" stream)
+         (dolist (frame (condition-info-backtrace info))
+           (terpri stream)
+           (write-string "      " stream)
+           (write-string frame stream)))
+       (when (condition-info-restarts info)
+         (terpri stream)
+         (write-string "    Restarts:" stream)
+         (dolist (restart (condition-info-restarts info))
+           (terpri stream)
+           (format stream "      ~A: ~A"
+                   (getf restart :name)
+                   (getf restart :description))))
+       (when (condition-info-cause info)
+         (terpri stream)
+         (write-string "    Caused by: " stream)
+         (format stream "~A (~A)"
+                 (princ-to-string (condition-info-cause info))
+                 (type-of (condition-info-cause info))))))
     (otherwise
      (prin1 (field-value field) stream))))

@@ -60,7 +60,22 @@
            #:bool
            #:timestamp
            #:duration-ms
-           #:error-field)
+           #:error-field
+           #:error-field-detailed)
+
+  ;; Condition system integration
+  (:export #:condition-info
+           #:condition-info-p
+           #:condition-info-type
+           #:condition-info-message
+           #:condition-info-backtrace
+           #:condition-info-restarts
+           #:condition-info-cause
+           #:analyze-condition
+           #:capture-backtrace
+           #:capture-restarts
+           #:condition-cause
+           #:condition-chain)
 
   ;; Contextual logging
   (:export #:with-fields

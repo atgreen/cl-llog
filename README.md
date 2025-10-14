@@ -16,7 +16,7 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **92-94% allocation reduction** (typed API vs sugared API)
 - **2KB per log call** with typed API
 - **Thread-local buffer caching** with >95% hit rate
-- **100% test pass rate** (477 checks)
+- **98% test pass rate** (515/522 checks)
 
 ## Features
 
@@ -33,6 +33,7 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **Async Logging**: `make-async-output` queues entries and flushes via a background worker thread
 - **Buffer Pool**: Thread-local caching with 92% allocation reduction (typed API vs sugared API)
 - **File Buffering**: Configurable buffering strategies (:none, :line, :block)
+- **Condition System Integration**: Enhanced error fields with backtrace capture, restart information, and condition chains
 
 ### In Progress 🚧
 
@@ -43,7 +44,6 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 ### Planned 📋
 
 - Hook system for extensibility (Phase 3.5)
-- Condition system integration with backtrace capture (Phase 3.4)
 - Sampling and rate limiting (Phase 3.6)
 - REPL integration helpers: show-recent, grep-logs, with-captured-logs (Phase 3.7)
 - Log templates: define-log-template macro (Phase 3.7)
@@ -149,6 +149,132 @@ Every logger ships with a console output by default. Swap or add backends using 
 
 Encoders are pluggable—pass `:encoder` to any output to switch formats (console, JSON, S-expression, pattern layout when available).
 
+## Condition System Integration
+
+LLOG provides first-class support for the Common Lisp condition system, automatically capturing rich debugging information when logging errors. This goes beyond simple error messages to include backtraces, active restarts, and condition chains.
+
+### Basic Error Logging
+
+Use `error-field-detailed` to capture comprehensive condition information:
+
+```lisp
+(handler-case
+    (/ 1 0)
+  (error (condition)
+    (llog:error "Division error occurred"
+                :error (llog:error-field-detailed "error" condition
+                                                  :backtrace t
+                                                  :restarts t))))
+```
+
+**JSON Output:**
+```json
+{
+  "level": "error",
+  "ts": "2025-10-13T19:56:26",
+  "msg": "Division error occurred",
+  "error": {
+    "type": "DIVISION-BY-ZERO",
+    "message": "arithmetic error DIVISION-BY-ZERO signalled",
+    "backtrace": [
+      "(/ 1 0)",
+      "(HANDLER-CASE ...)",
+      "..."
+    ],
+    "restarts": [
+      {"name": "RETRY", "description": "Retry division"},
+      {"name": "ABORT", "description": "Abort operation"}
+    ]
+  }
+}
+```
+
+**Console Output:**
+```
+2025-10-13T19:56:26 [ERROR] Division error occurred
+  error: arithmetic error DIVISION-BY-ZERO signalled (DIVISION-BY-ZERO)
+    Backtrace:
+      (/ 1 0)
+      (HANDLER-CASE ...)
+      ...
+    Restarts:
+      RETRY: Retry division
+      ABORT: Abort operation
+```
+
+### Features
+
+- **Automatic Backtrace Capture**: Implementation-specific support for SBCL and CCL with graceful fallback
+- **Restart Information**: Documents available recovery options at the error site
+- **Condition Chains**: Follows nested/wrapped conditions to root causes
+- **Zero Overhead**: Backtrace capture only happens when explicitly enabled
+- **All Encoders**: Works seamlessly with JSON, console, and S-expression outputs
+
+### API
+
+```lisp
+;; Full control over what's captured
+(llog:error-field-detailed "error" condition
+  :backtrace t    ; Capture stack frames (default: T)
+  :restarts nil   ; Capture restart info (default: NIL)
+  :chain nil)     ; Follow condition chain (default: NIL)
+
+;; Use with typed API for zero-allocation logging
+(llog:error-typed "Database connection failed"
+  (llog:error-field-detailed "db-error" condition :backtrace t))
+
+;; Direct condition analysis for custom handling
+(let ((info (llog:analyze-condition condition
+              :backtrace t
+              :restarts t
+              :chain t)))
+  ;; info is a condition-info structure
+  (llog:condition-info-backtrace info)  ; => list of frame strings
+  (llog:condition-info-restarts info)   ; => list of restart plists
+  (llog:condition-info-cause info))     ; => parent condition or nil
+```
+
+### Use Cases
+
+**Production Error Logging**:
+```lisp
+(handler-case
+    (process-payment order)
+  (payment-error (err)
+    (llog:error "Payment processing failed"
+                :order-id (order-id order)
+                :amount (order-amount order)
+                :error (llog:error-field-detailed "error" err :backtrace t))))
+```
+
+**Development Debugging**:
+```lisp
+;; Capture everything during development
+(handler-case
+    (load-config "config.lisp")
+  (error (err)
+    (llog:debug "Configuration load failed"
+                :config-file "config.lisp"
+                :error (llog:error-field-detailed "error" err
+                         :backtrace t
+                         :restarts t
+                         :chain t))))
+```
+
+**Nested Error Handling**:
+```lisp
+;; Automatically follows condition chains
+(handler-case
+    (handler-case
+        (open-database connection-string)
+      (network-error (err)
+        (error 'database-connection-error :cause err)))
+  (error (err)
+    (llog:error "Database unavailable"
+                :error (llog:error-field-detailed "error" err :chain t))))
+;; The logged error will include both the outer and inner conditions
+```
+
 ## Documentation
 
 - [Buffer Pool System](docs/buffer-pool.md) - Thread-local caching and memory management
@@ -172,7 +298,7 @@ Encoders are pluggable—pass `:encoder` to any output to switch formats (consol
 | JSON output | ✓ | ✓ | ✓ | ✓ |
 | Hook system | ✗ | ✓ | ✗ | ✓ (planned) |
 | REPL integration | N/A | N/A | ✓ | ✓ (planned) |
-| Condition system | N/A | N/A | ✗ | ✓ (planned) |
+| Condition system | N/A | N/A | ✗ | ✓ |
 
 ## Development
 
@@ -182,7 +308,7 @@ Encoders are pluggable—pass `:encoder` to any output to switch formats (consol
 (asdf:test-system :llog)
 ```
 
-**Current Test Status**: 477 checks, 100% pass rate
+**Current Test Status**: 522 checks, 98% pass rate (515 passing)
 
 Test coverage includes:
 - Log levels and filtering
@@ -195,6 +321,7 @@ Test coverage includes:
 - Buffer pool operations and thread-local caching
 - File output with multiple buffering modes
 - Async output with background worker thread
+- Condition system integration (backtrace capture, restart info, condition chains)
 
 ### Running Benchmarks
 

@@ -113,6 +113,8 @@
                          (%format-timestamp-string (field-value field))))
     (:error
      (%encode-json-condition stream (field-value field)))
+    (:error-detailed
+     (encode-condition-info-json stream (field-value field)))
     (otherwise
      (%write-json-string stream (prin1-to-string (field-value field)))))
   (values))
@@ -168,6 +170,7 @@
     (:bool (char-buffer-push-string buffer (if (field-value field) "true" "false")))
     (:timestamp (%json-buffer-write-timestamp buffer (field-value field)))
     (:error (%json-buffer-write-condition buffer (field-value field)))
+    (:error-detailed (encode-condition-info-buffer buffer (field-value field)))
     (otherwise (%json-buffer-write-string buffer (prin1-to-string (field-value field)))))
   buffer)
 

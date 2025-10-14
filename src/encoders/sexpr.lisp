@@ -26,6 +26,18 @@
      (let ((condition (field-value field)))
        (list :type (type-of condition)
              :message (princ-to-string condition))))
+    (:error-detailed
+     (let ((info (field-value field)))
+       (let ((result (list :type (condition-info-type info)
+                           :message (condition-info-message info))))
+         (when (condition-info-backtrace info)
+           (setf result (nconc result (list :backtrace (condition-info-backtrace info)))))
+         (when (condition-info-restarts info)
+           (setf result (nconc result (list :restarts (condition-info-restarts info)))))
+         (when (condition-info-cause info)
+           (setf result (nconc result (list :cause (list :type (type-of (condition-info-cause info))
+                                                         :message (princ-to-string (condition-info-cause info)))))))
+         result)))
     (otherwise
      (field-value field))))
 
