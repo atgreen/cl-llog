@@ -4,13 +4,12 @@
 (defsystem "llog"
   :version "0.1.0"
   :description "High-performance structured logging framework for Common Lisp"
-  :author "Your Name <your.email@example.com>"
+  :author "Anthony Green <green@moxielogic.com>"
   :license "MIT"
-  :homepage "https://github.com/yourusername/llog"
-  :bug-tracker "https://github.com/yourusername/llog/issues"
-  :source-control (:git "https://github.com/yourusername/llog.git")
+  :homepage "https://github.com/atgreen/cl-llog"
+  :bug-tracker "https://github.com/atgreen/cl-llog/issues"
+  :source-control (:git "https://github.com/atgreen/cl-llog.git")
 
-  ;; Core has zero external dependencies
   :depends-on ("bordeaux-threads")
 
   :components ((:module "src"
@@ -22,6 +21,7 @@
                              (:file "buffer-pool")
                              (:file "logger")
                              (:file "api")
+                             (:file "conditions")
 
                              (:module "encoders"
                               :components ((:file "encoder")
@@ -40,7 +40,7 @@
 
 (defsystem "llog/tests"
   :description "Test suite for LLOG"
-  :author "Your Name <your.email@example.com>"
+  :author "Anthony Green <green@moxielogic.com>"
   :license "MIT"
   :depends-on ("llog"
                "fiveam")
@@ -54,13 +54,14 @@
                              (:file "test-buffers")
                              (:file "test-outputs")
                              (:file "test-concurrency")
-                             (:file "test-api"))))
+                             (:file "test-api")
+                             (:file "test-conditions"))))
   :perform (test-op (o c) (symbol-call :fiveam :run! :llog)))
 
 
 (defsystem "llog/benchmarks"
   :description "Performance benchmarks for LLOG"
-  :author "Your Name <your.email@example.com>"
+  :author "Anthony Green <green@moxielogic.com>"
   :license "MIT"
   :depends-on ("llog"
                "trivial-benchmark")
