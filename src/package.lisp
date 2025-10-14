@@ -108,6 +108,7 @@
   (:export #:make-stream-output
            #:make-file-output
            #:make-async-output
+           #:write-entry
            #:flush-output
            #:close-output
            #:output)

@@ -60,11 +60,11 @@
                  :timestamp 123456789
                  :message "Test"
                  :logger-name "test"
-                 :fields nil))
-         (new-chain new-hash)
-         (values (llog-audit::chain-next-entry chain entry)))
-    (is (= 1 (llog-audit::hash-chain-entry-count new-chain)))
-    (is (stringp new-hash))
-    (is (string= new-hash (llog-audit::hash-chain-previous-hash new-chain)))))
+                 :fields nil)))
+    (multiple-value-bind (new-chain new-hash)
+        (llog-audit::chain-next-entry chain entry)
+      (is (= 1 (llog-audit::hash-chain-entry-count new-chain)))
+      (is (stringp new-hash))
+      (is (string= new-hash (llog-audit::hash-chain-previous-hash new-chain))))))
 
 ;; TODO: Add more tests for verify-chain once we have entry metadata support

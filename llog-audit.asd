@@ -12,7 +12,8 @@
 
   :depends-on ("llog"           ; Core logging system
                "ironclad"       ; Cryptographic hashing (SHA-256, etc.)
-               "cl-base64")     ; Base64 encoding for signatures
+               "cl-base64"      ; Base64 encoding for signatures
+               "babel")         ; String encoding
 
   :components ((:module "src/audit"
                 :serial t

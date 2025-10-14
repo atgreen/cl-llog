@@ -21,10 +21,20 @@
            #:audit-output-p)
 
   ;; Verification
-  (:export #:verify-audit
-           #:verify-audit-file
-           #:audit-verification-result
-           #:audit-verification-status)
+  (:export #:verify-audit-file
+           #:verification-result
+           #:verification-result-p
+           #:verification-result-status
+           #:verification-result-total-entries
+           #:verification-result-checkpoints-verified
+           #:verification-result-first-error
+           #:verification-result-error-line)
+
+  ;; Signatures
+  (:export #:load-signing-key
+           #:load-public-key
+           #:sign-data
+           #:verify-signature)
 
   ;; Hash chain
   (:export #:hash-chain
