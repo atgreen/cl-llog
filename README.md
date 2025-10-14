@@ -1,4 +1,4 @@
-# llog
+ llog
 
 **High-Performance Structured Logging for Common Lisp**
 
@@ -642,4 +642,3 @@ llog combines the best of both worlds:
 ## Contact
 
 - Issues: [GitHub Issues](https://github.com/atgreen/cl-llog/issues)
-- Discussions: [GitHub Discussions](https://github.com/atgreen/cl-llog/discussions)
