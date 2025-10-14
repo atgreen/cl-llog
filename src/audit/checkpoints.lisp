@@ -1,7 +1,7 @@
 ;;;; checkpoints.lisp - Periodic signed checkpoints for audit logs
 ;;;; SPDX-License-Identifier: MIT
 
-(in-package #:llog-audit)
+(in-package #:llog/audit)
 
 ;;; Checkpoints
 ;;;

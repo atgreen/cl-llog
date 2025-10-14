@@ -1,7 +1,7 @@
-;;;; package.lisp - Package definition for LLOG-AUDIT
+;;;; package.lisp - Package definition for LLOG/AUDIT
 ;;;; SPDX-License-Identifier: MIT
 
-(defpackage #:llog-audit
+(defpackage #:llog/audit
   (:use #:cl)
   (:import-from #:llog
                 #:log-entry

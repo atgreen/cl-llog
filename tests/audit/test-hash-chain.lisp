@@ -1,19 +1,19 @@
 ;;;; test-hash-chain.lisp - Tests for hash chain implementation
 ;;;; SPDX-License-Identifier: MIT
 
-(in-package #:llog-audit/tests)
+(in-package #:llog/audit/tests)
 
-(in-suite :llog-audit)
+(in-suite :llog/audit)
 
 ;;; Hash Chain Tests
 
 (def-test hash-chain-initialization ()
   "Test hash chain initialization."
-  (let ((chain (llog-audit::init-hash-chain)))
-    (is (llog-audit::hash-chain-p chain))
-    (is (eql :sha256 (llog-audit::hash-chain-algorithm chain)))
-    (is (null (llog-audit::hash-chain-previous-hash chain)))
-    (is (zerop (llog-audit::hash-chain-entry-count chain)))))
+  (let ((chain (llog/audit::init-hash-chain)))
+    (is (llog/audit::hash-chain-p chain))
+    (is (eql :sha256 (llog/audit::hash-chain-algorithm chain)))
+    (is (null (llog/audit::hash-chain-previous-hash chain)))
+    (is (zerop (llog/audit::hash-chain-entry-count chain)))))
 
 (def-test compute-entry-hash-deterministic ()
   "Test that entry hash is deterministic."
@@ -54,7 +54,7 @@
 
 (def-test chain-next-entry-increments-count ()
   "Test that chaining an entry increments the count."
-  (let* ((chain (llog-audit::init-hash-chain))
+  (let* ((chain (llog/audit::init-hash-chain))
          (entry (llog::%make-log-entry
                  :level llog:+info+
                  :timestamp 123456789
@@ -62,9 +62,9 @@
                  :logger-name "test"
                  :fields nil)))
     (multiple-value-bind (new-chain new-hash)
-        (llog-audit::chain-next-entry chain entry)
-      (is (= 1 (llog-audit::hash-chain-entry-count new-chain)))
+        (llog/audit::chain-next-entry chain entry)
+      (is (= 1 (llog/audit::hash-chain-entry-count new-chain)))
       (is (stringp new-hash))
-      (is (string= new-hash (llog-audit::hash-chain-previous-hash new-chain))))))
+      (is (string= new-hash (llog/audit::hash-chain-previous-hash new-chain))))))
 
 ;; TODO: Add more tests for verify-chain once we have entry metadata support

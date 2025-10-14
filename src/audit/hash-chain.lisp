@@ -1,7 +1,7 @@
 ;;;; hash-chain.lisp - Hash chain implementation for tamper detection
 ;;;; SPDX-License-Identifier: MIT
 
-(in-package #:llog-audit)
+(in-package #:llog/audit)
 
 ;;; Hash Chain Structure
 ;;;

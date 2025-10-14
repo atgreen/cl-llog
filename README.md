@@ -552,7 +552,7 @@ Define custom field types with validation and coercion:
 
 ## Tamper-Evident Audit Logs
 
-**llog-audit** is an optional extension that provides cryptographically-secured audit trails with hash chaining and digital signatures. It's designed for compliance requirements where tamper detection is mandatory.
+**llog/audit** is an optional extension that provides cryptographically-secured audit trails with hash chaining and digital signatures. It's designed for compliance requirements where tamper detection is mandatory.
 
 ### What is Tamper-Evident?
 
@@ -572,7 +572,7 @@ The audit system uses:
 
 ```lisp
 ;; Load the audit extension (separate from core llog)
-(asdf:load-system :llog-audit)
+(asdf:load-system :llog/audit)
 ```
 
 ### Basic Usage
@@ -580,7 +580,7 @@ The audit system uses:
 ```lisp
 ;; Create an audit output with hash chaining
 (llog:add-output *logger*
-  (llog-audit:make-audit-output "audit.log"
+  (llog/audit:make-audit-output "audit.log"
     :algorithm :sha256
     :checkpoint-interval 1000
     :metadata '(:system "payment-service" :version "1.0")))
@@ -592,8 +592,8 @@ The audit system uses:
   :transaction-id "txn-abc")
 
 ;; Verify audit log integrity
-(let ((result (llog-audit:verify-audit-file "audit.log")))
-  (case (llog-audit:verification-result-status result)
+(let ((result (llog/audit:verify-audit-file "audit.log")))
+  (case (llog/audit:verification-result-status result)
     (:valid (format t "Audit log is valid!~%"))
     (:tampered (format t "ALERT: Audit log has been tampered!~%"))))
 ```
@@ -611,25 +611,25 @@ Add Ed25519 signatures for non-repudiation:
 
 ;; Create signed audit output (synchronous)
 (llog:add-output *logger*
-  (llog-audit:make-audit-output "audit.log"
+  (llog/audit:make-audit-output "audit.log"
     :signing-key "audit-private.key"
     :checkpoint-interval 1000))
 
 ;; Or wrap with async output for background signing
 (llog:add-output *logger*
   (llog:make-async-output
-    (llog-audit:make-audit-output "audit.log"
+    (llog/audit:make-audit-output "audit.log"
       :signing-key "audit-private.key")))
 
 ;; Verify signatures
-(let ((result (llog-audit:verify-audit-file "audit.log"
+(let ((result (llog/audit:verify-audit-file "audit.log"
                                             :public-key "audit-public.key")))
-  (if (eq :valid (llog-audit:verification-result-status result))
+  (if (eq :valid (llog/audit:verification-result-status result))
       (format t "Audit log verified! ~D entries, ~D checkpoints~%"
-              (llog-audit:verification-result-total-entries result)
-              (llog-audit:verification-result-checkpoints-verified result))
+              (llog/audit:verification-result-total-entries result)
+              (llog/audit:verification-result-checkpoints-verified result))
       (format t "Verification failed: ~A~%"
-              (llog-audit:verification-result-first-error result))))
+              (llog/audit:verification-result-first-error result))))
 ```
 
 ### Async Composition Pattern
@@ -638,11 +638,11 @@ Signature computation is synchronous by default, but expensive cryptographic ope
 
 ```lisp
 ;; Synchronous: signatures block the logging thread
-(llog-audit:make-audit-output "audit.log" :signing-key "private.key")
+(llog/audit:make-audit-output "audit.log" :signing-key "private.key")
 
 ;; Async: signatures happen in background thread
 (llog:make-async-output
-  (llog-audit:make-audit-output "audit.log" :signing-key "private.key"))
+  (llog/audit:make-audit-output "audit.log" :signing-key "private.key"))
 ```
 
 This composition pattern keeps the audit implementation simple while giving users control over performance tradeoffs.

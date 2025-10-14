@@ -1,9 +1,9 @@
 ;;;; test-audit-output.lisp - Tests for audit output
 ;;;; SPDX-License-Identifier: MIT
 
-(in-package #:llog-audit/tests)
+(in-package #:llog/audit/tests)
 
-(in-suite :llog-audit)
+(in-suite :llog/audit)
 
 ;;; Audit Output Tests
 
@@ -14,8 +14,8 @@
     (unwind-protect
          (let ((output (make-audit-output temp-file)))
            (is (audit-output-p output))
-           (is (llog-audit::audit-output-stream output))
-           (is (= 1000 (llog-audit::audit-output-checkpoint-interval output)))
+           (is (llog/audit::audit-output-stream output))
+           (is (= 1000 (llog/audit::audit-output-checkpoint-interval output)))
            (llog:close-output output))
       ;; Cleanup
       (when (probe-file temp-file)
@@ -71,16 +71,16 @@
                              :logger-name "test"
                              :fields nil)))
                  (llog:write-entry output entry)
-                 (push (llog-audit::hash-chain-previous-hash
-                        (llog-audit::audit-output-chain output))
+                 (push (llog/audit::hash-chain-previous-hash
+                        (llog/audit::audit-output-chain output))
                        hashes)))
 
              ;; All hashes should be different
              (is (= 3 (length (remove-duplicates hashes :test #'string=))))
 
              ;; Entry count should be correct
-             (is (= 3 (llog-audit::hash-chain-entry-count
-                      (llog-audit::audit-output-chain output)))))
+             (is (= 3 (llog/audit::hash-chain-entry-count
+                      (llog/audit::audit-output-chain output)))))
 
            (llog:close-output output))
       ;; Cleanup
@@ -166,13 +166,13 @@
              (llog:close-output output))
 
            ;; Verify the file
-           (let ((result (llog-audit:verify-audit-file temp-file)))
-             (is (llog-audit:verification-result-p result))
-             (is (eql :valid (llog-audit:verification-result-status result)))
-             (is (= 12 (llog-audit:verification-result-total-entries result)))
+           (let ((result (llog/audit:verify-audit-file temp-file)))
+             (is (llog/audit:verification-result-p result))
+             (is (eql :valid (llog/audit:verification-result-status result)))
+             (is (= 12 (llog/audit:verification-result-total-entries result)))
              ;; Should have 3 checkpoints: at 5, 10, and final (12)
-             (is (= 3 (llog-audit:verification-result-checkpoints-verified result)))
-             (is (null (llog-audit:verification-result-first-error result)))))
+             (is (= 3 (llog/audit:verification-result-checkpoints-verified result)))
+             (is (null (llog/audit:verification-result-first-error result)))))
       ;; Cleanup
       (when (probe-file temp-file)
         (delete-file temp-file)))))
@@ -211,9 +211,9 @@
                             out)))
 
            ;; Verify should detect tampering
-           (let ((result (llog-audit:verify-audit-file temp-file)))
-             (is (eql :tampered (llog-audit:verification-result-status result)))
-             (is (stringp (llog-audit:verification-result-first-error result)))))
+           (let ((result (llog/audit:verify-audit-file temp-file)))
+             (is (eql :tampered (llog/audit:verification-result-status result)))
+             (is (stringp (llog/audit:verification-result-first-error result)))))
       ;; Cleanup
       (when (probe-file temp-file)
         (delete-file temp-file)))))
@@ -231,9 +231,9 @@
              (declare (ignore out)))
 
            ;; Verify should report invalid
-           (let ((result (llog-audit:verify-audit-file temp-file)))
-             (is (eql :invalid (llog-audit:verification-result-status result)))
-             (is (stringp (llog-audit:verification-result-first-error result)))))
+           (let ((result (llog/audit:verify-audit-file temp-file)))
+             (is (eql :invalid (llog/audit:verification-result-status result)))
+             (is (stringp (llog/audit:verification-result-first-error result)))))
       ;; Cleanup
       (when (probe-file temp-file)
         (delete-file temp-file)))))
@@ -262,7 +262,7 @@
                                              :signature-algorithm :ed25519
                                              :checkpoint-interval 5)))
                (is (audit-output-p output))
-               (is (llog-audit::audit-output-signing-key output))
+               (is (llog/audit::audit-output-signing-key output))
                (llog:close-output output)))
       ;; Cleanup
       (when (probe-file temp-file)
@@ -311,12 +311,12 @@
                (llog:close-output output))
 
              ;; Verify with public key
-             (let ((result (llog-audit:verify-audit-file temp-file
+             (let ((result (llog/audit:verify-audit-file temp-file
                                                         :public-key temp-pub-key)))
-               (is (eql :valid (llog-audit:verification-result-status result)))
-               (is (= 12 (llog-audit:verification-result-total-entries result)))
-               (is (= 3 (llog-audit:verification-result-checkpoints-verified result)))
-               (is (null (llog-audit:verification-result-first-error result)))))
+               (is (eql :valid (llog/audit:verification-result-status result)))
+               (is (= 12 (llog/audit:verification-result-total-entries result)))
+               (is (= 3 (llog/audit:verification-result-checkpoints-verified result)))
+               (is (null (llog/audit:verification-result-first-error result)))))
       ;; Cleanup
       (when (probe-file temp-file)
         (delete-file temp-file))
@@ -380,10 +380,10 @@
                               out)))
 
              ;; Verify should detect tampering
-             (let ((result (llog-audit:verify-audit-file temp-file
+             (let ((result (llog/audit:verify-audit-file temp-file
                                                         :public-key temp-pub-key)))
-               (is (eql :tampered (llog-audit:verification-result-status result)))
-               (is (search "signature" (llog-audit:verification-result-first-error result)))))
+               (is (eql :tampered (llog/audit:verification-result-status result)))
+               (is (search "signature" (llog/audit:verification-result-first-error result)))))
       ;; Cleanup
       (when (probe-file temp-file)
         (delete-file temp-file))

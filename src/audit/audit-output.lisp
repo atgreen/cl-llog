@@ -1,7 +1,7 @@
 ;;;; audit-output.lisp - Tamper-evident audit log output
 ;;;; SPDX-License-Identifier: MIT
 
-(in-package #:llog-audit)
+(in-package #:llog/audit)
 
 ;;; Audit Output
 ;;;

@@ -1,4 +1,4 @@
-# llog-audit: Tamper-Evident Audit Trails
+# llog/audit: Tamper-Evident Audit Trails
 
 **Status:** 🚧 **Under Development** - Basic skeleton in place
 
@@ -23,7 +23,7 @@ The audit system uses:
 
 ## Dependencies
 
-The `llog-audit` system adds these dependencies (isolated from core `llog`):
+The `llog/audit` system adds these dependencies (isolated from core `llog`):
 - **ironclad**: Cryptographic hashing (SHA-256, SHA-512, SHA3)
 - **cl-base64**: Base64 encoding for hashes
 - **babel**: String encoding (transitive dependency)
@@ -32,7 +32,7 @@ The `llog-audit` system adds these dependencies (isolated from core `llog`):
 
 ```lisp
 ;; Load the audit extension
-(asdf:load-system :llog-audit)
+(asdf:load-system :llog/audit)
 ```
 
 ## Usage
@@ -42,7 +42,7 @@ The `llog-audit` system adds these dependencies (isolated from core `llog`):
 ```lisp
 ;; Create an audit output
 (llog:add-output *logger*
-  (llog-audit:make-audit-output "audit.log"
+  (llog/audit:make-audit-output "audit.log"
     :algorithm :sha256
     :checkpoint-interval 1000
     :metadata '(:system "payment-service" :version "1.0")))
@@ -54,8 +54,8 @@ The `llog-audit` system adds these dependencies (isolated from core `llog`):
   :transaction-id "txn-abc")
 
 ;; Verify audit log integrity
-(let ((result (llog-audit:verify-audit-file "audit.log")))
-  (case (llog-audit:verification-result-status result)
+(let ((result (llog/audit:verify-audit-file "audit.log")))
+  (case (llog/audit:verification-result-status result)
     (:valid (format t "Audit log is valid!~%"))
     (:tampered (format t "ALERT: Audit log has been tampered!~%"))))
 ```
@@ -67,13 +67,13 @@ The `llog-audit` system adds these dependencies (isolated from core `llog`):
 ```lisp
 ;; Synchronous audit logging (signatures block logging thread)
 (llog:add-output *logger*
-  (llog-audit:make-audit-output "audit.log"
+  (llog/audit:make-audit-output "audit.log"
     :signing-key "/path/to/private-key.pem"))
 
 ;; Async audit logging (signatures happen in background thread)
 (llog:add-output *logger*
   (llog:make-async-output
-    (llog-audit:make-audit-output "audit.log"
+    (llog/audit:make-audit-output "audit.log"
       :signing-key "/path/to/private-key.pem")))
 ```
 
@@ -102,20 +102,20 @@ The `llog-audit` system adds these dependencies (isolated from core `llog`):
 
 ;; Create signed audit output
 (llog:add-output *logger*
-  (llog-audit:make-audit-output "audit.log"
+  (llog/audit:make-audit-output "audit.log"
     :signing-key "audit-private.key"
     :signature-algorithm :ed25519
     :checkpoint-interval 1000))
 
 ;; Verify signatures
-(let ((result (llog-audit:verify-audit-file "audit.log"
+(let ((result (llog/audit:verify-audit-file "audit.log"
                                             :public-key "audit-public.key")))
-  (if (eq :valid (llog-audit:verification-result-status result))
+  (if (eq :valid (llog/audit:verification-result-status result))
       (format t "Audit log verified! ~D entries, ~D checkpoints~%"
-              (llog-audit:verification-result-total-entries result)
-              (llog-audit:verification-result-checkpoints-verified result))
+              (llog/audit:verification-result-total-entries result)
+              (llog/audit:verification-result-checkpoints-verified result))
       (format t "Verification failed: ~A~%"
-              (llog-audit:verification-result-first-error result))))
+              (llog/audit:verification-result-first-error result))))
 ```
 
 ## File Format

@@ -1,10 +1,10 @@
-;;;; tests/audit/package.lisp - Test package for LLOG-AUDIT
+;;;; tests/audit/package.lisp - Test package for LLOG/AUDIT
 ;;;; SPDX-License-Identifier: MIT
 
-(defpackage #:llog-audit/tests
-  (:documentation "Test suite for the LLOG-AUDIT audit trail system.")
+(defpackage #:llog/audit/tests
+  (:documentation "Test suite for the LLOG/AUDIT audit trail system.")
   (:use #:cl #:fiveam)
-  (:import-from #:llog-audit
+  (:import-from #:llog/audit
                 #:hash-chain
                 #:compute-entry-hash
                 #:verify-chain
@@ -19,6 +19,6 @@
                 #:info
                 #:*logger*))
 
-(in-package #:llog-audit/tests)
+(in-package #:llog/audit/tests)
 
-(def-suite :llog-audit)
+(def-suite :llog/audit)
