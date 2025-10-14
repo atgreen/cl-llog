@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install SBCL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sbcl
+
+      - name: Install ocicl
+        run: |
+          curl -sL https://github.com/ocicl/ocicl/releases/latest/download/install.sh | bash
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Setup ocicl
+        run: |
+          ocicl setup
+
+      - name: Run linter
+        run: |
+          ocicl lint src/ tests/
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        lisp: [sbcl]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install SBCL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y sbcl
+
+      - name: Install ocicl
+        run: |
+          curl -sL https://github.com/ocicl/ocicl/releases/latest/download/install.sh | bash
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Setup ocicl and install dependencies
+        run: |
+          ocicl setup
+          ocicl install
+
+      - name: Run tests
+        run: |
+          sbcl --noinform --non-interactive \
+            --eval '(asdf:test-system :llog)' \
+            2>&1 | tee test-output.txt
+
+      - name: Check test results
+        run: |
+          if grep -q "Fail: 0" test-output.txt && grep -q "Pass:" test-output.txt; then
+            echo "✅ All tests passed!"
+            exit 0
+          else
+            echo "❌ Tests failed!"
+            exit 1
+          fi
+
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "=== Test Summary ==="
+          grep "Did.*checks" test-output.txt || true
+          grep -A 1 "Pass:" test-output.txt || true
