@@ -15,7 +15,7 @@ I reviewed the current `llog` codebase to evaluate the structure of the logging 
 - `src/package.lisp` shadows common CL symbols (`string`, `float`, `error`, `trace`, `debug`, `warn`), forcing callers to manage symbol conflicts rather than offering a friendly import path.
 - Typed field helpers rely on a single `field` struct with manual type tags, pushing users toward pre-defined constructors instead of extending behaviour via CLOS methods.
 - Core functions frequently manipulate slots with `slot-value` while holding locks, bypassing accessor methods and method combinations that are idiomatic in Lisp.
-- Several exports lack implementations (`show-recent`, `grep-logs`, `with-captured-logs`, `define-field-type`), creating a misleading public API.
+- ~~Several exports lack implementations (`show-recent`, `grep-logs`, `with-captured-logs`, `define-field-type`), creating a misleading public API.~~ **[RESOLVED 2025-10-14]** All REPL integration features now fully implemented.
 - Aggressive `(optimize speed (safety 0))` declarations appear throughout hot paths, removing safety checks for library consumers by default.
 
 ## Recommendations
@@ -23,7 +23,18 @@ I reviewed the current `llog` codebase to evaluate the structure of the logging 
 1. Revisit package exports: either rename conflicting symbols (e.g. `log-string`), or introduce a `llog-user` package that wraps the API without shadowing core Common Lisp functions.
 2. Replace manual field tagging with a generic protocol—let callers specialise `encode-field` or introduce a `coerce-field` generic so new types integrate through CLOS rather than bespoke structs.
 3. Provide macro front-ends that delay work until level checks pass (using `once-only` patterns or compiler macros) and lean on method combinations for hook chains instead of bespoke `%call-*` functions.
-4. Implement the missing helper exports and deliver a `define-field-type` macro that generates the necessary generics, showcasing idiomatic macro usage.
+4. ~~Implement the missing helper exports and deliver a `define-field-type` macro that generates the necessary generics, showcasing idiomatic macro usage.~~ **[COMPLETED 2025-10-14]** All REPL helpers implemented with `define-field-type` macro for custom field types.
 5. Move unsafe optimisation settings into compiler macros or document how callers can opt into lowered safety, keeping the default definitions safe for general use.
 
 These changes would keep the current performance focus while making the library feel more naturally Lispy to users.
+
+## Status Update (2025-10-14)
+
+**REPL Integration Complete:** All four missing REPL exports have been implemented in `src/repl.lisp` with comprehensive tests (17 tests, 100% passing). The implementation includes:
+- Thread-safe circular buffer for recent logs
+- Filtering capabilities (level, logger name, regex patterns)
+- Hook-based recording system
+- Log capture for testing via `with-captured-logs` macro
+- Custom field type system via `define-field-type` macro
+
+The library now delivers on its promise of REPL-friendly features inspired by log4cl traditions.
