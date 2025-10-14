@@ -16,7 +16,7 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **92-94% allocation reduction** (typed API vs sugared API)
 - **2KB per log call** with typed API
 - **Thread-local buffer caching** with >95% hit rate
-- **98% test pass rate** (515/522 checks)
+- **100% test pass rate** (534/534 checks)
 
 ## Features
 
@@ -308,7 +308,7 @@ Use `error-field-detailed` to capture comprehensive condition information:
 (asdf:test-system :llog)
 ```
 
-**Current Test Status**: 522 checks, 98% pass rate (515 passing)
+**Current Test Status**: 534 checks, 100% pass rate (all passing)
 
 Test coverage includes:
 - Log levels and filtering
