@@ -26,6 +26,7 @@
                 #:make-log-entry
                 #:log-entry-level
                 #:log-entry-message
+                #:log-entry-logger-name
                 #:log-entry-fields
                 #:logger
                 #:logger-level

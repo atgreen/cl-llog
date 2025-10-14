@@ -10,7 +10,8 @@
   :bug-tracker "https://github.com/atgreen/cl-llog/issues"
   :source-control (:git "https://github.com/atgreen/cl-llog.git")
 
-  :depends-on ("bordeaux-threads")
+  :depends-on ("bordeaux-threads"
+               "cl-ppcre")
 
   :components ((:module "src"
                 :serial t
@@ -26,6 +27,7 @@
                              (:file "rate-limiting")
                              (:file "api")
                              (:file "conditions")
+                             (:file "repl")
 
                              (:module "encoders"
                               :components ((:file "encoder")
@@ -65,7 +67,8 @@
                              (:file "test-sampling")
                              (:file "test-rate-limiting")
                              (:file "test-hierarchy")
-                             (:file "test-pattern"))))
+                             (:file "test-pattern")
+                             (:file "test-repl"))))
   :perform (test-op (o c) (symbol-call :fiveam :run! :llog)))
 
 

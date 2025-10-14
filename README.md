@@ -1,8 +1,8 @@
-# LLOG
+# llog
 
 **High-Performance Structured Logging for Common Lisp**
 
-LLOG is a modern, high-performance structured logging framework for
+llog is a modern, high-performance structured logging framework for
 Common Lisp, inspired by the best practices from the Go ecosystem
 (zap, zerolog, logrus).
 
@@ -16,7 +16,7 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **92-94% allocation reduction** (typed API vs sugared API)
 - **2KB per log call** with typed API
 - **Thread-local buffer caching** with >95% hit rate
-- **100% test pass rate** (665/665 checks)
+- **100% test pass rate** (723/723 checks)
 
 ## Features
 
@@ -36,6 +36,9 @@ Common Lisp, inspired by the best practices from the Go ecosystem
 - **Condition System Integration**: Enhanced error fields with backtrace capture, restart information, and condition chains
 - **Hook System**: Extensible hooks for pre-log filtering/modification, post-log notifications, and error handling
 - **Sampling and Rate Limiting**: Control log volume with probabilistic/deterministic sampling and token bucket rate limiting
+- **REPL Integration**: Interactive development features including recent log buffer, grep search, log capture for testing, and custom field types
+- **Hierarchical Loggers**: Named logger hierarchy with inheritance and pattern-based configuration
+- **Pattern Layouts**: Customizable log formats with pattern strings
 
 ## Quick Start
 
@@ -406,6 +409,161 @@ Prevent log storms using token bucket rate limiting:
 
 See `examples/sampling-examples.lisp` for 10 real-world examples including cost analysis, dynamic sampling, and monitoring strategies.
 
+## REPL Integration
+
+llog provides powerful REPL integration features for interactive development and debugging, making it easy to inspect, search, and capture log entries during development.
+
+### Recent Logs Buffer
+
+Keep recent log entries in memory for quick inspection:
+
+```lisp
+;; Enable recent logs tracking (keeps last 100 entries by default)
+(llog:enable-recent-logs *logger*)
+
+;; Generate some logs
+(llog:info "User logged in" :user-id 123 :username "alice")
+(llog:warn "Cache miss" :key "user:123")
+(llog:error "Database timeout" :query "SELECT * FROM users")
+
+;; View recent entries
+(llog:show-recent)
+;; Displays last 10 entries with timestamps and fields
+
+;; Show all buffered entries
+(llog:show-recent :count :all)
+
+;; Filter by log level
+(llog:show-recent :level :error)  ; Only ERROR and above
+
+;; Filter by logger name
+(llog:show-recent :logger-name "app.db")
+
+;; Filter by regex pattern (case-insensitive)
+(llog:show-recent :pattern "user")  ; Matches "User", "user", "USERNAME", etc.
+
+;; Disable when done
+(llog:disable-recent-logs *logger*)
+```
+
+### Searching Logs
+
+Search through recent entries with regex patterns:
+
+```lisp
+;; Find all logs containing "error" (case-insensitive)
+(llog:grep-logs "error")
+
+;; Find login events at INFO level or above
+(llog:grep-logs "login" :level :info)
+
+;; Find database queries from specific logger
+(llog:grep-logs "query" :logger-name "app.db")
+
+;; Regex patterns supported
+(llog:grep-logs "User \\d+")  ; Find entries like "User 123"
+
+;; Returns list of matching log entries for programmatic use
+(let ((errors (llog:grep-logs "failed")))
+  (format t "Found ~D errors~%" (length errors)))
+```
+
+### Capturing Logs for Testing
+
+Capture log output in tests without writing to disk:
+
+```lisp
+(fiveam:test my-feature-test
+  (multiple-value-bind (result logs)
+      (llog:with-captured-logs (*logger*)
+        ;; Code under test
+        (my-function)
+        (process-data))
+
+    ;; Assert on the captured logs
+    (is (= 3 (length logs)))
+    (is (search "Processing started"
+                (llog:log-entry-message (first logs))))
+    (is (>= (llog:log-entry-level (second logs))
+            llog:+warn+))))
+
+;; Capture only specific levels
+(llog:with-captured-logs (*logger* :level :error)
+  ;; Only ERROR and above are captured
+  (llog:info "Not captured")
+  (llog:error "This is captured"))
+```
+
+### Custom Field Types
+
+Define custom field types with validation and coercion:
+
+```lisp
+;; Simple custom type
+(llog:define-field-type uuid (value string)
+  :documentation "UUID field type")
+
+;; Type with validation
+(llog:define-field-type email (value string)
+  :documentation "Email field type"
+  :coercion (progn
+              (unless (find #\@ value)
+                (error "Invalid email: ~A" value))
+              value))
+
+;; Type with coercion
+(llog:define-field-type percentage (value real)
+  :documentation "Percentage field (0-100)"
+  :coercion (max 0.0 (min 100.0 (float value 1.0))))
+
+;; Use custom types in logging
+(llog:info-typed "User registered"
+  (llog:uuid "user-id" "550e8400-e29b-41d4-a716-446655440000")
+  (llog:email "email" "alice@example.com")
+  (llog:percentage "completion" 75.5))
+```
+
+### Features
+
+- **Circular Buffer**: Automatically wraps when full, always keeping most recent entries
+- **Thread-Safe**: All REPL operations are protected with locks
+- **Zero Overhead**: No performance impact when disabled
+- **Flexible Filtering**: Combine level, logger name, and regex patterns
+- **Test Integration**: Works seamlessly with FiveAM and other test frameworks
+- **Custom Types**: Extend the type system with domain-specific field types
+
+### Use Cases
+
+**Interactive Development**:
+```lisp
+;; Enable during development session
+(llog:enable-recent-logs *logger* 500)
+
+;; Work on your feature, then review what happened
+(llog:show-recent :pattern "database" :level :warn)
+```
+
+**Debugging Production Issues**:
+```lisp
+;; Temporarily enable in production to capture issue
+(llog:enable-recent-logs *logger* 1000)
+
+;; Let it run for a bit, then search for problems
+(llog:grep-logs "timeout|failed|error" :level :error)
+```
+
+**Test-Driven Development**:
+```lisp
+(test api-error-handling
+  "Verify proper error logging"
+  (multiple-value-bind (result logs)
+      (llog:with-captured-logs ()
+        (handler-case (api-call-that-fails)
+          (error (e) nil)))
+    (is (= 1 (length logs)))
+    (is (search "API call failed" (llog:log-entry-message (first logs))))))
+```
+
 ## Documentation
 
 - [Buffer Pool System](docs/buffer-pool.md) - Thread-local caching and memory management
@@ -415,7 +573,7 @@ See `examples/sampling-examples.lisp` for 10 real-world examples including cost 
 
 ## Comparison with Other Loggers
 
-| Feature | zap | zerolog | log4cl | LLOG |
+| Feature | zap | zerolog | log4cl | llog |
 |---------|-----|---------|--------|------|
 | Zero-allocation | ✓ | ✓ | ✗ | ✓ (92-94% reduction) |
 | Structured logging | ✓ | ✓ | ✓ | ✓ |
@@ -429,7 +587,7 @@ See `examples/sampling-examples.lisp` for 10 real-world examples including cost 
 | JSON output | ✓ | ✓ | ✓ | ✓ |
 | Hook system | ✗ | ✓ | ✗ | ✓ |
 | Sampling/Rate limiting | ✗ | ✗ | ✗ | ✓ |
-| REPL integration | N/A | N/A | ✓ | ✓ (planned) |
+| REPL integration | N/A | N/A | ✓ | ✓ |
 | Condition system | N/A | N/A | ✗ | ✓ |
 
 ## Development
@@ -440,13 +598,14 @@ See `examples/sampling-examples.lisp` for 10 real-world examples including cost 
 (asdf:test-system :llog)
 ```
 
-**Current Test Status**: 665 checks, 100% pass rate (all passing)
+**Current Test Status**: 723 checks, 100% pass rate (all passing)
 
 Test coverage includes:
 - Log levels and filtering
 - Field constructors and type preservation
 - Logger lifecycle and configuration
 - All three encoders (console, JSON, S-expression)
+- Pattern layouts with format strings
 - Sugared and typed APIs
 - Contextual logging with fields
 - Thread-safe concurrent logging (6 concurrency test suites)
@@ -457,6 +616,8 @@ Test coverage includes:
 - Hook system (pre-log, post-log, error hooks with priority and isolation)
 - Sampling (probabilistic and deterministic)
 - Rate limiting (token bucket with time-based refill)
+- Hierarchical logger system
+- REPL integration (recent logs buffer, grep search, log capture, custom field types)
 
 ### Running Benchmarks
 
@@ -486,7 +647,7 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-LLOG combines the best of both worlds:
+llog combines the best of both worlds:
 
 **Performance-oriented design** inspired by Go logging libraries:
 - [uber-go/zap](https://github.com/uber-go/zap) - Dual API design, zero-allocation goals

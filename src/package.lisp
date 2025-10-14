@@ -138,7 +138,9 @@
   ;; REPL helpers
   (:export #:show-recent
            #:grep-logs
-           #:with-captured-logs)
+           #:with-captured-logs
+           #:enable-recent-logs
+           #:disable-recent-logs)
 
   ;; Custom field types
   (:export #:define-field-type)
