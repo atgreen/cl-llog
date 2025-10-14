@@ -85,13 +85,16 @@
 
 (defun keywords-to-fields (keyword-args)
   "Convert a plist of keyword arguments to a list of field structures.
-   Automatically infers type from value."
+   Automatically infers type from value. If value is already a field,
+   uses it directly (for error-field-detailed, etc.)."
   (declare (optimize speed))
   (loop for (key value) on keyword-args by #'cddr
-        collect (make-field
-                 (string-downcase (symbol-name key))
-                 value
-                 (infer-field-type value))))
+        collect (if (field-p value)
+                    value  ; Already a field, use it directly
+                    (make-field
+                     (string-downcase (symbol-name key))
+                     value
+                     (infer-field-type value)))))
 
 (defun infer-field-type (value)
   "Infer the field type from a value."
