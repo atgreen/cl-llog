@@ -11,7 +11,7 @@
   "Test that get-logger creates a new logger if it doesn't exist."
   (llog::clear-logger-registry)
   (let ((logger (llog:get-logger "test.logger")))
-    (is logger)
+    (is (not (null logger)))  ; lint:suppress not-null
     (is (typep logger 'llog::logger))
     (is (string= "test.logger" (llog::logger-name logger)))))
 
@@ -208,9 +208,9 @@
   "Test that ensure-logger-hierarchy creates all parent loggers."
   (llog::clear-logger-registry)
   (llog::ensure-logger-hierarchy "app.db.query")
-  (is (llog:find-logger "app"))
-  (is (llog:find-logger "app.db"))
-  (is (llog:find-logger "app.db.query")))
+  (is (not (null (llog:find-logger "app"))))  ; lint:suppress not-null
+  (is (not (null (llog:find-logger "app.db"))))  ; lint:suppress not-null
+  (is (not (null (llog:find-logger "app.db.query")))))  ; lint:suppress not-null
 
 ;;; Error Handling
 
