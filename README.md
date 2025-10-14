@@ -268,7 +268,7 @@ Complete API documentation is available in [docs/api/](docs/api/):
 
 ## Test Status
 
-**764/764 tests passing (100%)** - Production-ready implementation
+**723/723 tests passing (100%)** - Production-ready implementation
 
 ## Performance
 
