@@ -63,6 +63,11 @@
            #:error-field
            #:error-field-detailed)
 
+  ;; Field accessors
+  (:export #:field-name
+           #:field-value
+           #:field-type)
+
   ;; Condition system integration
   (:export #:condition-info
            #:condition-info-p

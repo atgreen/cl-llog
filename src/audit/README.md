@@ -1,8 +1,8 @@
-# llog/audit: Tamper-Evident Audit Trails
+# LLOG/Audit: Tamper-Evident Audit Trails
 
 **Status:** 🚧 **Under Development** - Basic skeleton in place
 
-This is an optional extension to the llog logging framework that provides **tamper-evident** (not tamper-proof) audit trails using cryptographic hash chaining.
+This is an optional extension to the LLOG logging framework that provides **tamper-evident** (not tamper-proof) audit trails using cryptographic hash chaining.
 
 ## What is Tamper-Evident?
 
